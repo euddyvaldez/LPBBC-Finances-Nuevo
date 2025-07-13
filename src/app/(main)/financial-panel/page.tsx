@@ -120,7 +120,7 @@ export default function FinancialPanelPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl font-bold tracking-tight">Panel Financiero</h1>
+      <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Panel Financiero</h1>
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <SummaryCard title="Ingresos del Período" value={formatCurrency(summary.ingresos)} color="text-green-500" />
@@ -136,8 +136,8 @@ export default function FinancialPanelPage() {
         <CardContent className="space-y-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex bg-muted p-1 rounded-lg">
-              <Button variant={filterMode === 'predefined' ? 'default' : 'ghost'} onClick={() => setFilterMode('predefined')} className="flex-1">Períodos Predefinidos</Button>
-              <Button variant={filterMode === 'custom' ? 'default' : 'ghost'} onClick={() => setFilterMode('custom')} className="flex-1">Rango Personalizado</Button>
+              <Button variant={filterMode === 'predefined' ? 'default' : 'ghost'} onClick={() => setFilterMode('predefined')} className="flex-1 text-xs sm:text-sm">Períodos Predefinidos</Button>
+              <Button variant={filterMode === 'custom' ? 'default' : 'ghost'} onClick={() => setFilterMode('custom')} className="flex-1 text-xs sm:text-sm">Rango Personalizado</Button>
             </div>
             
             {filterMode === 'predefined' ? (
@@ -200,10 +200,10 @@ export default function FinancialPanelPage() {
 const SummaryCard = ({ title, value, color }: { title: string; value: string; color: string }) => (
   <Card>
     <CardHeader className="pb-2">
-      <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+      <CardTitle className="text-xs md:text-sm font-medium text-muted-foreground">{title}</CardTitle>
     </CardHeader>
     <CardContent>
-      <div className={`text-2xl font-bold ${color}`}>{value}</div>
+      <div className={`text-xl md:text-2xl font-bold ${color}`}>{value}</div>
     </CardContent>
   </Card>
 );

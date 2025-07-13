@@ -131,7 +131,7 @@ export const deleteRazon = async (id: string): Promise<void> => {
 // Financial Records
 export const getFinancialRecords = async (): Promise<FinancialRecord[]> => {
   await simulateDbDelay();
-  return [...financialRecords].sort((a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime());
+  return [...financialRecords];
 };
 
 export const addFinancialRecord = async (record: Omit<FinancialRecord, 'id'>): Promise<FinancialRecord> => {

@@ -80,24 +80,24 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-8">
-      <h1 className="text-3xl font-bold tracking-tight">Inicio</h1>
+    <div className="space-y-6 md:space-y-8">
+      <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Inicio</h1>
       
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:gap-6 md:grid-cols-2 lg:grid-cols-3">
         {/* Main Balance Card */}
         <Card className="lg:col-span-2 shadow-lg">
           <CardHeader>
-            <CardTitle className="text-2xl font-semibold text-muted-foreground">
+            <CardTitle className="text-xl md:text-2xl font-semibold text-muted-foreground">
               Balance General
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6 text-center">
+          <CardContent className="space-y-4 md:space-y-6 text-center">
             {balanceVisible ? (
-              <p className={cn('text-5xl font-bold tracking-tighter', balance >= 0 ? 'text-green-500' : 'text-red-500')}>
+              <p className={cn('text-4xl md:text-5xl font-bold tracking-tighter', balance >= 0 ? 'text-green-500' : 'text-red-500')}>
                 {formatCurrency(balance)}
               </p>
             ) : (
-               <p className="text-4xl font-bold text-muted-foreground tracking-widest animate-pulse">
+               <p className="text-3xl md:text-4xl font-bold text-muted-foreground tracking-widest animate-pulse">
                 -- OCULTO --
               </p>
             )}
@@ -155,10 +155,10 @@ export default function DashboardPage() {
                         {recentRecords.map((record) => (
                            <li key={record.id} className="flex justify-between items-center">
                                <div>
-                                   <p className="font-medium">{record.descripcion}</p>
-                                   <p className="text-sm text-muted-foreground">{format(parseISO(record.fecha), 'dd MMM yyyy', { locale: es })}</p>
+                                   <p className="font-medium text-sm">{record.descripcion}</p>
+                                   <p className="text-xs text-muted-foreground">{format(parseISO(record.fecha), 'dd MMM yyyy', { locale: es })}</p>
                                </div>
-                               <span className={cn('font-mono font-semibold', record.monto >= 0 ? 'text-green-500' : 'text-red-500')}>
+                               <span className={cn('font-mono font-semibold text-sm', record.monto >= 0 ? 'text-green-500' : 'text-red-500')}>
                                    {formatCurrency(record.monto)}
                                </span>
                            </li>
@@ -178,7 +178,7 @@ export default function DashboardPage() {
         <CardContent className="p-6">
             {citas.length > 0 ? (
                  <blockquote className="text-center italic">
-                    <p className="text-lg">"{citas[currentCitaIndex].texto}"</p>
+                    <p className="text-base md:text-lg">"{citas[currentCitaIndex].texto}"</p>
                     <footer className="mt-2 text-sm text-muted-foreground">- {citas[currentCitaIndex].autor}</footer>
                 </blockquote>
             ) : (

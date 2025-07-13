@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useState, useMemo, useRef } from 'react';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Download, Loader2, Upload } from 'lucide-react';
@@ -167,14 +167,16 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
   const getRazonDesc = (id: string) => razones.find((r) => r.id === id)?.descripcion || 'N/A';
   
   const filteredRecords = useMemo(() => {
-    if (!filter) return records;
-    return records.filter((record) => {
+    const sortedRecords = [...records].sort((a, b) => parseISO(b.fecha).getTime() - parseISO(a.fecha).getTime());
+
+    if (!filter) return sortedRecords;
+    return sortedRecords.filter((record) => {
       let fieldValue = '';
       switch (filterField) {
         case 'descripcion': fieldValue = record.descripcion; break;
         case 'integrante': fieldValue = getIntegranteName(record.integranteId); break;
         case 'razon': fieldValue = getRazonDesc(record.razonId); break;
-        case 'fecha': fieldValue = format(new Date(record.fecha), 'yyyy-MM-dd'); break;
+        case 'fecha': fieldValue = format(parseISO(record.fecha), 'yyyy-MM-dd'); break;
         default: fieldValue = record.descripcion;
       }
       return fieldValue.toLowerCase().includes(filter.toLowerCase());
@@ -241,9 +243,9 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
             const razonMap = new Map(razones.map(r => [r.descripcion.toLowerCase(), r.id]));
 
             for (let i = 1; i < lines.length; i++) {
-                const values = lines[i].split(',');
+                const values = lines[i].split(',').map(v => v.replace(/"/g, '').trim());
                 const row = headers.reduce((obj, header, index) => {
-                    obj[header] = values[index]?.replace(/"/g, '').trim();
+                    obj[header] = values[index];
                     return obj;
                 }, {} as {[key: string]: string});
 
@@ -327,7 +329,7 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
               {filteredRecords.length > 0 ? (
                 filteredRecords.map((record) => (
                   <TableRow key={record.id}>
-                    <TableCell>{format(new Date(record.fecha), 'dd MMM yyyy', { locale: es })}</TableCell>
+                    <TableCell className="whitespace-nowrap">{format(parseISO(record.fecha), 'dd MMM yyyy', { locale: es })}</TableCell>
                     <TableCell>{getIntegranteName(record.integranteId)}</TableCell>
                     <TableCell>{record.movimiento}</TableCell>
                     <TableCell>{getRazonDesc(record.razonId)}</TableCell>
