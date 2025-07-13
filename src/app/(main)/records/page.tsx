@@ -9,7 +9,7 @@ import { useState, useMemo, useRef } from 'react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { Download, Loader2, Upload } from 'lucide-react';
+import { Download, Loader2, Upload, BadgeDollarSign, User, Tag, FileText, Calendar as CalendarIcon, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -17,7 +17,6 @@ import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Calendar as CalendarIcon, Search } from 'lucide-react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import type { FinancialRecord, Movimiento } from '@/types';
 import { Textarea } from '@/components/ui/textarea';
@@ -154,6 +153,33 @@ const RecordsForm = () => {
     </Card>
   );
 }
+
+const RecordCard = ({ record, getIntegranteName, getRazonDesc }: { record: FinancialRecord; getIntegranteName: (id: string) => string; getRazonDesc: (id: string) => string }) => {
+    const movimientoColors: { [key in Movimiento]: string } = {
+        'INGRESOS': 'border-l-green-500',
+        'GASTOS': 'border-l-red-500',
+        'INVERSION': 'border-l-amber-500'
+    };
+
+    return (
+        <Card className={cn("mb-3 overflow-hidden", movimientoColors[record.movimiento], 'border-l-4')}>
+            <CardContent className="p-4 space-y-3">
+                <div className="flex justify-between items-start">
+                    <p className="font-semibold text-lg">{record.descripcion}</p>
+                    <div className={cn('font-mono font-bold text-lg', record.monto >= 0 ? 'text-green-500' : 'text-red-500')}>
+                        {record.monto.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}
+                    </div>
+                </div>
+                <div className="text-sm text-muted-foreground space-y-2">
+                    <div className="flex items-center gap-2"><Tag className="w-4 h-4" /> <span>{getRazonDesc(record.razonId)} ({record.movimiento})</span></div>
+                    <div className="flex items-center gap-2"><User className="w-4 h-4" /> <span>{getIntegranteName(record.integranteId)}</span></div>
+                    <div className="flex items-center gap-2"><CalendarIcon className="w-4 h-4" /> <span>{format(parseISO(record.fecha), 'dd MMMM yyyy', { locale: es })}</span></div>
+                </div>
+            </CardContent>
+        </Card>
+    );
+};
+
 
 const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
   const { integrantes, razones, importFinancialRecords } = useAppContext();
@@ -313,38 +339,52 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Fecha</TableHead>
-                <TableHead>Integrante</TableHead>
-                <TableHead>Movimiento</TableHead>
-                <TableHead>Razón</TableHead>
-                <TableHead>Descripción</TableHead>
-                <TableHead className="text-right">Monto</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+            {/* Mobile View: Cards */}
+            <div className="md:hidden">
               {filteredRecords.length > 0 ? (
-                filteredRecords.map((record) => (
-                  <TableRow key={record.id}>
-                    <TableCell className="whitespace-nowrap">{format(parseISO(record.fecha), 'dd MMM yyyy', { locale: es })}</TableCell>
-                    <TableCell>{getIntegranteName(record.integranteId)}</TableCell>
-                    <TableCell>{record.movimiento}</TableCell>
-                    <TableCell>{getRazonDesc(record.razonId)}</TableCell>
-                    <TableCell>{record.descripcion}</TableCell>
-                    <TableCell className={cn('text-right font-mono', record.monto >= 0 ? 'text-green-500' : 'text-red-500')}>
-                      {record.monto.toFixed(2)}
-                    </TableCell>
-                  </TableRow>
-                ))
+                  filteredRecords.map((record) => (
+                      <RecordCard key={record.id} record={record} getIntegranteName={getIntegranteName} getRazonDesc={getRazonDesc} />
+                  ))
               ) : (
-                <TableRow><TableCell colSpan={6} className="text-center">No hay registros que mostrar.</TableCell></TableRow>
+                  <div className="text-center py-8 text-muted-foreground">No hay registros que mostrar.</div>
               )}
-            </TableBody>
-          </Table>
-          </div>
+            </div>
+
+            {/* Desktop View: Table */}
+            <div className="hidden md:block">
+                <div className="overflow-x-auto">
+                    <Table>
+                        <TableHeader>
+                        <TableRow>
+                            <TableHead>Fecha</TableHead>
+                            <TableHead>Integrante</TableHead>
+                            <TableHead>Movimiento</TableHead>
+                            <TableHead>Razón</TableHead>
+                            <TableHead>Descripción</TableHead>
+                            <TableHead className="text-right">Monto</TableHead>
+                        </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                        {filteredRecords.length > 0 ? (
+                            filteredRecords.map((record) => (
+                            <TableRow key={record.id}>
+                                <TableCell className="whitespace-nowrap">{format(parseISO(record.fecha), 'dd MMM yyyy', { locale: es })}</TableCell>
+                                <TableCell>{getIntegranteName(record.integranteId)}</TableCell>
+                                <TableCell>{record.movimiento}</TableCell>
+                                <TableCell>{getRazonDesc(record.razonId)}</TableCell>
+                                <TableCell>{record.descripcion}</TableCell>
+                                <TableCell className={cn('text-right font-mono', record.monto >= 0 ? 'text-green-500' : 'text-red-500')}>
+                                {record.monto.toFixed(2)}
+                                </TableCell>
+                            </TableRow>
+                            ))
+                        ) : (
+                            <TableRow><TableCell colSpan={6} className="text-center">No hay registros que mostrar.</TableCell></TableRow>
+                        )}
+                        </TableBody>
+                    </Table>
+                </div>
+            </div>
         </CardContent>
       </Card>
       <AlertDialog open={importDialog.isOpen} onOpenChange={(isOpen) => setImportDialog({isOpen, file: isOpen ? importDialog.file : null})}>
@@ -383,3 +423,5 @@ export default function RecordsPage() {
         </div>
     );
 }
+
+    
