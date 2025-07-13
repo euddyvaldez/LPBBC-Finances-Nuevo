@@ -235,7 +235,7 @@ export default function QuickRecordPage() {
                                 </Button>
                             </FormControl>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" >
                             <Command>
                                 <CommandInput placeholder="Buscar integrante..." />
                                 <CommandList>

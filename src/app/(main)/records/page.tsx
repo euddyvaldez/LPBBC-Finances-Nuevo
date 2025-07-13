@@ -102,7 +102,7 @@ const RecordsForm = () => {
                                 <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button>
                             </FormControl>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" onOpenAutoFocus={(e) => e.preventDefault()}><Command>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" ><Command>
                             <CommandInput placeholder="Buscar integrante..." />
                             <CommandList><CommandEmpty>No se encontró.</CommandEmpty><CommandGroup>
                                 {integrantes.map((i) => (
@@ -120,7 +120,7 @@ const RecordsForm = () => {
                                 <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button>
                             </FormControl>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" onOpenAutoFocus={(e) => e.preventDefault()}><Command>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" ><Command>
                             <CommandInput placeholder="Buscar razón..." />
                             <CommandList><CommandEmpty>No se encontró.</CommandEmpty><CommandGroup>
                                 {razones.map((r) => (
