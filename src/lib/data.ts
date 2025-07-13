@@ -133,6 +133,30 @@ export const addFinancialRecord = async (record: Omit<FinancialRecord, 'id'>): P
   return newRecord;
 };
 
+export const importFinancialRecords = async (recordsToImport: Omit<FinancialRecord, 'id'>[], mode: 'add' | 'replace'): Promise<void> => {
+  await simulateDbDelay();
+  const newRecordsWithIds = recordsToImport.map(r => {
+    let monto = r.monto;
+    if ((r.movimiento === 'GASTOS' || r.movimiento === 'INVERSION') && monto > 0) {
+        monto = -monto;
+    }
+    if (r.movimiento === 'INGRESOS' && monto < 0) {
+        monto = Math.abs(monto);
+    }
+    return {
+      ...r,
+      monto,
+      id: String(Date.now() + Math.random()) // simple unique id
+    }
+  });
+
+  if (mode === 'replace') {
+    financialRecords = newRecordsWithIds;
+  } else {
+    financialRecords.push(...newRecordsWithIds);
+  }
+};
+
 export const getCitas = async (): Promise<Cita[]> => {
     await simulateDbDelay();
     return citas;

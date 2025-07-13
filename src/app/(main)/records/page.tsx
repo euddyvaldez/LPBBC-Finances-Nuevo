@@ -5,11 +5,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { Download, Loader2 } from 'lucide-react';
+import { Download, Loader2, Upload } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -21,6 +21,7 @@ import { Calendar as CalendarIcon, Search } from 'lucide-react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import type { FinancialRecord, Movimiento } from '@/types';
 import { Textarea } from '@/components/ui/textarea';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const recordSchema = z.object({
   fecha: z.date({ required_error: 'La fecha es requerida.' }),
@@ -155,10 +156,12 @@ const RecordsForm = () => {
 }
 
 const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
-  const { integrantes, razones } = useAppContext();
+  const { integrantes, razones, importFinancialRecords } = useAppContext();
   const { toast } = useToast();
   const [filter, setFilter] = useState('');
   const [filterField, setFilterField] = useState('descripcion');
+  const importFileInputRef = useRef<HTMLInputElement>(null);
+  const [importDialog, setImportDialog] = useState<{isOpen: boolean, file: File | null}>({isOpen: false, file: null});
 
   const getIntegranteName = (id: string) => integrantes.find((i) => i.id === id)?.nombre || 'N/A';
   const getRazonDesc = (id: string) => razones.find((r) => r.id === id)?.descripcion || 'N/A';
@@ -179,7 +182,7 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
   }, [filter, filterField, records, integrantes, razones]);
 
   const exportToCSV = () => {
-    const headers = ['Fecha', 'Integrante', 'Movimiento', 'Razón', 'Descripción', 'Monto'];
+    const headers = ['fecha', 'integranteNombre', 'movimiento', 'razonDescripcion', 'descripcion', 'monto'];
     const rows = filteredRecords.map(r => [
       r.fecha,
       `"${getIntegranteName(r.integranteId).replace(/"/g, '""')}"`,
@@ -198,61 +201,166 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
     document.body.removeChild(link);
     toast({ title: 'Éxito', description: 'Registros exportados a CSV.' });
   };
+  
+  const handleImportClick = () => {
+    importFileInputRef.current?.click();
+  };
+
+  const handleFileSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setImportDialog({ isOpen: true, file: file });
+    }
+  };
+
+  const processImport = (mode: 'add' | 'replace') => {
+    const file = importDialog.file;
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        const text = e.target?.result;
+        if (typeof text !== 'string') {
+            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo leer el archivo.' });
+            return;
+        }
+        try {
+            const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+            const headers = lines[0].split(',').map(h => h.trim());
+            
+            const requiredHeaders = ['fecha', 'integranteNombre', 'movimiento', 'razonDescripcion', 'descripcion', 'monto'];
+            const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
+            if (missingHeaders.length > 0) {
+              throw new Error(`Faltan las siguientes columnas en el CSV: ${missingHeaders.join(', ')}`);
+            }
+            
+            const recordsToImport: Omit<FinancialRecord, 'id'>[] = [];
+            const errors: string[] = [];
+
+            const integranteMap = new Map(integrantes.map(i => [i.nombre.toLowerCase(), i.id]));
+            const razonMap = new Map(razones.map(r => [r.descripcion.toLowerCase(), r.id]));
+
+            for (let i = 1; i < lines.length; i++) {
+                const values = lines[i].split(',');
+                const row = headers.reduce((obj, header, index) => {
+                    obj[header] = values[index]?.replace(/"/g, '').trim();
+                    return obj;
+                }, {} as {[key: string]: string});
+
+                const integranteId = integranteMap.get(row.integranteNombre?.toLowerCase());
+                const razonId = razonMap.get(row.razonDescripcion?.toLowerCase());
+                
+                if (!integranteId) { errors.push(`Línea ${i + 1}: No se encontró el integrante "${row.integranteNombre}".`); continue; }
+                if (!razonId) { errors.push(`Línea ${i + 1}: No se encontró la razón "${row.razonDescripcion}".`); continue; }
+                
+                recordsToImport.push({
+                    fecha: row.fecha,
+                    integranteId: integranteId,
+                    razonId: razonId,
+                    movimiento: row.movimiento as Movimiento,
+                    descripcion: row.descripcion,
+                    monto: parseFloat(row.monto)
+                });
+            }
+            
+            if (errors.length > 0) {
+              throw new Error(errors.join(' '));
+            }
+
+            if (recordsToImport.length > 0) {
+                await importFinancialRecords(recordsToImport, mode);
+                toast({ title: 'Éxito', description: `${recordsToImport.length} registros importados en modo "${mode}".` });
+            } else {
+                toast({ title: 'Información', description: 'No se encontraron nuevos registros para importar.' });
+            }
+
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Un error desconocido ocurrió.';
+            toast({ variant: 'destructive', title: 'Error de importación', description: `No se pudo procesar el archivo CSV. ${message}`, duration: 8000 });
+        } finally {
+            if (importFileInputRef.current) importFileInputRef.current.value = '';
+            setImportDialog({ isOpen: false, file: null });
+        }
+    };
+    reader.readAsText(file);
+  };
+
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Historial de Registros</CardTitle>
-        <CardDescription>Consulta y filtra todos los movimientos financieros.</CardDescription>
-        <div className="flex flex-col md:flex-row gap-2 pt-4">
-          <Select value={filterField} onValueChange={setFilterField}>
-            <SelectTrigger className="w-full md:w-[180px]"><SelectValue placeholder="Filtrar por..." /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="descripcion">Descripción</SelectItem>
-              <SelectItem value="integrante">Integrante</SelectItem>
-              <SelectItem value="razon">Razón</SelectItem>
-              <SelectItem value="fecha">Fecha (YYYY-MM-DD)</SelectItem>
-            </SelectContent>
-          </Select>
-          <Input placeholder="Buscar..." value={filter} onChange={(e) => setFilter(e.target.value)} className="flex-1"/>
-          <Button onClick={exportToCSV} variant="outline" className="w-full md:w-auto"><Download className="mr-2 h-4 w-4"/>Exportar CSV</Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Fecha</TableHead>
-              <TableHead>Integrante</TableHead>
-              <TableHead>Movimiento</TableHead>
-              <TableHead>Razón</TableHead>
-              <TableHead>Descripción</TableHead>
-              <TableHead className="text-right">Monto</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredRecords.length > 0 ? (
-              filteredRecords.map((record) => (
-                <TableRow key={record.id}>
-                  <TableCell>{format(new Date(record.fecha), 'dd MMM yyyy', { locale: es })}</TableCell>
-                  <TableCell>{getIntegranteName(record.integranteId)}</TableCell>
-                  <TableCell>{record.movimiento}</TableCell>
-                  <TableCell>{getRazonDesc(record.razonId)}</TableCell>
-                  <TableCell>{record.descripcion}</TableCell>
-                  <TableCell className={cn('text-right font-mono', record.monto >= 0 ? 'text-green-500' : 'text-red-500')}>
-                    {record.monto.toFixed(2)}
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow><TableCell colSpan={6} className="text-center">No hay registros que mostrar.</TableCell></TableRow>
-            )}
-          </TableBody>
-        </Table>
-        </div>
-      </CardContent>
-    </Card>
+    <>
+      <Card>
+        <CardHeader>
+          <CardTitle>Historial de Registros</CardTitle>
+          <CardDescription>Consulta y filtra todos los movimientos financieros.</CardDescription>
+          <div className="flex flex-col md:flex-row gap-2 pt-4">
+            <Select value={filterField} onValueChange={setFilterField}>
+              <SelectTrigger className="w-full md:w-[180px]"><SelectValue placeholder="Filtrar por..." /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="descripcion">Descripción</SelectItem>
+                <SelectItem value="integrante">Integrante</SelectItem>
+                <SelectItem value="razon">Razón</SelectItem>
+                <SelectItem value="fecha">Fecha (YYYY-MM-DD)</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input placeholder="Buscar..." value={filter} onChange={(e) => setFilter(e.target.value)} className="flex-1"/>
+            <div className="flex gap-2">
+              <Button onClick={handleImportClick} variant="outline" className="w-full md:w-auto"><Upload className="mr-2 h-4 w-4"/>Importar CSV</Button>
+              <input type="file" ref={importFileInputRef} onChange={handleFileSelected} className="hidden" accept=".csv"/>
+              <Button onClick={exportToCSV} variant="outline" className="w-full md:w-auto"><Download className="mr-2 h-4 w-4"/>Exportar CSV</Button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Fecha</TableHead>
+                <TableHead>Integrante</TableHead>
+                <TableHead>Movimiento</TableHead>
+                <TableHead>Razón</TableHead>
+                <TableHead>Descripción</TableHead>
+                <TableHead className="text-right">Monto</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredRecords.length > 0 ? (
+                filteredRecords.map((record) => (
+                  <TableRow key={record.id}>
+                    <TableCell>{format(new Date(record.fecha), 'dd MMM yyyy', { locale: es })}</TableCell>
+                    <TableCell>{getIntegranteName(record.integranteId)}</TableCell>
+                    <TableCell>{record.movimiento}</TableCell>
+                    <TableCell>{getRazonDesc(record.razonId)}</TableCell>
+                    <TableCell>{record.descripcion}</TableCell>
+                    <TableCell className={cn('text-right font-mono', record.monto >= 0 ? 'text-green-500' : 'text-red-500')}>
+                      {record.monto.toFixed(2)}
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow><TableCell colSpan={6} className="text-center">No hay registros que mostrar.</TableCell></TableRow>
+              )}
+            </TableBody>
+          </Table>
+          </div>
+        </CardContent>
+      </Card>
+      <AlertDialog open={importDialog.isOpen} onOpenChange={(isOpen) => setImportDialog({isOpen, file: isOpen ? importDialog.file : null})}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Importar Registros</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Cómo deseas importar los registros del archivo?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="sm:justify-center">
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => processImport('add')}>Agregar a existentes</AlertDialogAction>
+            <AlertDialogAction onClick={() => processImport('replace')} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Reemplazar todo</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 
