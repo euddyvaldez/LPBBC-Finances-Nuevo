@@ -13,11 +13,11 @@ interface AppContextType {
   addFinancialRecord: (record: Omit<FinancialRecord, 'id'>) => Promise<void>;
   importFinancialRecords: (records: Omit<FinancialRecord, 'id'>[], mode: 'add' | 'replace') => Promise<void>;
   addIntegrante: (nombre: string) => Promise<void>;
-  addMultipleIntegrantes: (integrantes: Omit<Integrante, 'id'>[]) => Promise<void>;
+  importIntegrantes: (integrantes: Omit<Integrante, 'id'>[], mode: 'add' | 'replace') => Promise<void>;
   updateIntegrante: (id: string, nombre: string) => Promise<void>;
   deleteIntegrante: (id: string) => Promise<void>;
   addRazon: (descripcion: string) => Promise<void>;
-  addMultipleRazones: (razones: Omit<Razon, 'id'>[]) => Promise<void>;
+  importRazones: (razones: Omit<Razon, 'id'>[], mode: 'add' | 'replace') => Promise<void>;
   updateRazon: (id: string, updates: Partial<Omit<Razon, 'id'>>) => Promise<void>;
   deleteRazon: (id: string) => Promise<void>;
 }
@@ -69,8 +69,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     fetchData();
   };
 
-  const handleAddMultipleIntegrantes = async (integrantes: Omit<Integrante, 'id'>[]) => {
-    await api.addMultipleIntegrantes(integrantes);
+  const handleImportIntegrantes = async (integrantes: Omit<Integrante, 'id'>[], mode: 'add' | 'replace') => {
+    await api.importIntegrantes(integrantes, mode);
     fetchData();
   };
 
@@ -89,8 +89,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     fetchData();
   };
 
-  const handleAddMultipleRazones = async (razones: Omit<Razon, 'id'>[]) => {
-    await api.addMultipleRazones(razones);
+  const handleImportRazones = async (razones: Omit<Razon, 'id'>[], mode: 'add' | 'replace') => {
+    await api.importRazones(razones, mode);
     fetchData();
   };
 
@@ -114,11 +114,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     addFinancialRecord: handleAddFinancialRecord,
     importFinancialRecords: handleImportFinancialRecords,
     addIntegrante: handleAddIntegrante,
-    addMultipleIntegrantes: handleAddMultipleIntegrantes,
+    importIntegrantes: handleImportIntegrantes,
     updateIntegrante: handleUpdateIntegrante,
     deleteIntegrante: handleDeleteIntegrante,
     addRazon: handleAddRazon,
-    addMultipleRazones: handleAddMultipleRazones,
+    importRazones: handleImportRazones,
     updateRazon: handleUpdateRazon,
     deleteRazon: handleDeleteRazon,
   };

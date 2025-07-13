@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import type { Integrante } from '@/types';
 
 export default function MembersPage() {
-  const { integrantes, addIntegrante, updateIntegrante, deleteIntegrante, financialRecords, loading, addMultipleIntegrantes } = useAppContext();
+  const { integrantes, addIntegrante, updateIntegrante, deleteIntegrante, financialRecords, loading, importIntegrantes } = useAppContext();
   const { toast } = useToast();
 
   const [newIntegranteName, setNewIntegranteName] = useState('');
@@ -21,6 +21,8 @@ export default function MembersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState('alpha-asc');
   const importFileInputRef = useRef<HTMLInputElement>(null);
+  const [importDialog, setImportDialog] = useState<{isOpen: boolean, file: File | null}>({isOpen: false, file: null});
+
 
   const handleAdd = async () => {
     if (!newIntegranteName.trim()) {
@@ -103,8 +105,15 @@ export default function MembersPage() {
     importFileInputRef.current?.click();
   };
 
-  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    if (file) {
+      setImportDialog({ isOpen: true, file: file });
+    }
+  };
+  
+  const processImport = (mode: 'add' | 'replace') => {
+    const file = importDialog.file;
     if (!file) return;
 
     const reader = new FileReader();
@@ -124,25 +133,34 @@ export default function MembersPage() {
         }
 
         const newIntegrantes: Omit<Integrante, 'id'>[] = [];
+        const existingNames = new Set(integrantes.map(i => i.nombre.toLowerCase()));
+
         for (let i = 1; i < lines.length; i++) {
           const values = lines[i].split(',');
           const nombre = values[nombreIndex]?.replace(/"/g, '').trim();
-          if (nombre && !integrantes.some(inte => inte.nombre.toLowerCase() === nombre.toLowerCase())) {
-            newIntegrantes.push({ nombre });
+
+          if (nombre) {
+            const isProtected = values[headers.indexOf('isProtected')]?.trim().toLowerCase() === 'true';
+            if (mode === 'add' && !existingNames.has(nombre.toLowerCase())) {
+                newIntegrantes.push({ nombre, isProtected });
+            } else if (mode === 'replace') {
+                newIntegrantes.push({ nombre, isProtected });
+            }
           }
         }
         
         if (newIntegrantes.length > 0) {
-          await addMultipleIntegrantes(newIntegrantes);
-          toast({ title: 'Éxito', description: `${newIntegrantes.length} nuevos integrantes importados.` });
+          await importIntegrantes(newIntegrantes, mode);
+          toast({ title: 'Éxito', description: `${newIntegrantes.length} integrantes importados en modo "${mode}".` });
         } else {
-          toast({ title: 'Información', description: 'No se encontraron nuevos integrantes para importar.' });
+          toast({ title: 'Información', description: 'No se encontraron nuevos integrantes para importar o no hay cambios.' });
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Un error desconocido ocurrió.';
         toast({ variant: 'destructive', title: 'Error de importación', description: `No se pudo procesar el archivo CSV. ${message}` });
       } finally {
         if(importFileInputRef.current) importFileInputRef.current.value = '';
+        setImportDialog({ isOpen: false, file: null });
       }
     };
     reader.readAsText(file);
@@ -212,7 +230,7 @@ export default function MembersPage() {
             </Select>
             <div className="flex gap-2">
               <Button onClick={handleImportClick} variant="outline" className="w-full md:w-auto"><Upload className="mr-2 h-4 w-4"/>Importar CSV</Button>
-              <input type="file" ref={importFileInputRef} onChange={handleImport} className="hidden" accept=".csv"/>
+              <input type="file" ref={importFileInputRef} onChange={handleFileSelected} className="hidden" accept=".csv"/>
               <Button onClick={exportToCSV} variant="outline" className="w-full md:w-auto"><Download className="mr-2 h-4 w-4"/>Exportar CSV</Button>
             </div>
           </div>
@@ -261,6 +279,22 @@ export default function MembersPage() {
           </ul>
         </CardContent>
       </Card>
+
+      <AlertDialog open={importDialog.isOpen} onOpenChange={(isOpen) => setImportDialog({isOpen, file: isOpen ? importDialog.file : null})}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Importar Integrantes</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Cómo deseas importar los integrantes del archivo? Al reemplazar, los integrantes protegidos por el sistema se mantendrán.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="sm:justify-center">
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => processImport('add')}>Agregar a existentes</AlertDialogAction>
+            <AlertDialogAction onClick={() => processImport('replace')} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Reemplazar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

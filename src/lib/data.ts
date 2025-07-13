@@ -33,6 +33,9 @@ const citas: Cita[] = [
 
 const simulateDbDelay = (ms = 50) => new Promise(res => setTimeout(res, ms));
 
+const createNewId = () => String(Date.now() + Math.random());
+
+
 // --- API Functions ---
 
 // Integrantes
@@ -43,32 +46,41 @@ export const getIntegrantes = async (): Promise<Integrante[]> => {
 
 export const addIntegrante = async (nombre: string): Promise<Integrante> => {
   await simulateDbDelay();
-  const newId = String(Date.now());
-  const newIntegrante: Integrante = { id: newId, nombre: nombre.toUpperCase() };
+  const newIntegrante: Integrante = { id: createNewId(), nombre: nombre.toUpperCase() };
   integrantes.push(newIntegrante);
   return newIntegrante;
 };
 
-export const addMultipleIntegrantes = async (newIntegrantes: Omit<Integrante, 'id'>[]): Promise<void> => {
+export const importIntegrantes = async (integrantesToImport: Omit<Integrante, 'id'>[], mode: 'add' | 'replace'): Promise<void> => {
   await simulateDbDelay();
-  const integrantesToAdd = newIntegrantes.map(i => ({
+  const newIntegrantesWithIds = integrantesToImport.map(i => ({
     ...i,
-    id: String(Date.now() + Math.random()),
-    nombre: i.nombre.toUpperCase()
+    id: createNewId(),
+    nombre: i.nombre.toUpperCase(),
   }));
-  integrantes.push(...integrantesToAdd);
+
+  if (mode === 'replace') {
+    const protectedIntegrantes = integrantes.filter(i => i.isProtected);
+    integrantes = [...protectedIntegrantes, ...newIntegrantesWithIds];
+  } else {
+    integrantes.push(...newIntegrantesWithIds);
+  }
 };
+
 
 export const updateIntegrante = async (id: string, nombre: string): Promise<Integrante> => {
   await simulateDbDelay();
   const integrante = integrantes.find(i => i.id === id);
   if (!integrante) throw new Error('Integrante no encontrado');
+  if (integrante.isProtected) throw new Error('No se puede modificar un integrante protegido.');
   integrante.nombre = nombre.toUpperCase();
   return integrante;
 };
 
 export const deleteIntegrante = async (id: string): Promise<void> => {
   await simulateDbDelay();
+  const integrante = integrantes.find(i => i.id === id);
+  if (integrante?.isProtected) throw new Error('No se puede eliminar un integrante protegido.');
   integrantes = integrantes.filter(i => i.id !== id);
 };
 
@@ -80,21 +92,26 @@ export const getRazones = async (): Promise<Razon[]> => {
 
 export const addRazon = async (descripcion: string): Promise<Razon> => {
     await simulateDbDelay();
-    const newId = String(Date.now());
-    const newRazon: Razon = { id: newId, descripcion: descripcion.toUpperCase(), isQuickReason: false };
+    const newRazon: Razon = { id: createNewId(), descripcion: descripcion.toUpperCase(), isQuickReason: false };
     razones.push(newRazon);
     return newRazon;
 };
 
-export const addMultipleRazones = async (newRazones: Omit<Razon, 'id'>[]): Promise<void> => {
+export const importRazones = async (razonesToImport: Omit<Razon, 'id'>[], mode: 'add' | 'replace'): Promise<void> => {
   await simulateDbDelay();
-  const razonesToAdd = newRazones.map(r => ({
+  const newRazonesWithIds = razonesToImport.map(r => ({
     ...r,
-    id: String(Date.now() + Math.random()), // simple unique id
-    descripcion: r.descripcion.toUpperCase()
+    id: createNewId(),
+    descripcion: r.descripcion.toUpperCase(),
   }));
-  razones.push(...razonesToAdd);
+
+  if (mode === 'replace') {
+    razones = newRazonesWithIds;
+  } else {
+    razones.push(...newRazonesWithIds);
+  }
 };
+
 
 export const updateRazon = async (id: string, updates: Partial<Omit<Razon, 'id'>>): Promise<Razon> => {
     await simulateDbDelay();
@@ -119,7 +136,6 @@ export const getFinancialRecords = async (): Promise<FinancialRecord[]> => {
 
 export const addFinancialRecord = async (record: Omit<FinancialRecord, 'id'>): Promise<FinancialRecord> => {
   await simulateDbDelay();
-  const newId = String(Date.now());
   let monto = record.monto;
   if ((record.movimiento === 'GASTOS' || record.movimiento === 'INVERSION') && monto > 0) {
       monto = -monto;
@@ -128,7 +144,7 @@ export const addFinancialRecord = async (record: Omit<FinancialRecord, 'id'>): P
       monto = Math.abs(monto);
   }
   
-  const newRecord: FinancialRecord = { ...record, id: newId, monto };
+  const newRecord: FinancialRecord = { ...record, id: createNewId(), monto };
   financialRecords.push(newRecord);
   return newRecord;
 };
@@ -146,7 +162,7 @@ export const importFinancialRecords = async (recordsToImport: Omit<FinancialReco
     return {
       ...r,
       monto,
-      id: String(Date.now() + Math.random()) // simple unique id
+      id: createNewId(),
     }
   });
 

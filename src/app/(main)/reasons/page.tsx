@@ -13,7 +13,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import type { Razon } from '@/types';
 
 export default function ReasonsPage() {
-  const { razones, addRazon, updateRazon, deleteRazon, financialRecords, loading, addMultipleRazones } = useAppContext();
+  const { razones, addRazon, updateRazon, deleteRazon, financialRecords, loading, importRazones } = useAppContext();
   const { toast } = useToast();
 
   const [newRazonDesc, setNewRazonDesc] = useState('');
@@ -22,6 +22,8 @@ export default function ReasonsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState('alpha-asc');
   const importFileInputRef = useRef<HTMLInputElement>(null);
+  const [importDialog, setImportDialog] = useState<{isOpen: boolean, file: File | null}>({isOpen: false, file: null});
+
 
   const handleAdd = async () => {
     if (!newRazonDesc.trim()) {
@@ -113,8 +115,15 @@ export default function ReasonsPage() {
     importFileInputRef.current?.click();
   };
 
-  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
+    if (file) {
+      setImportDialog({ isOpen: true, file: file });
+    }
+  };
+  
+  const processImport = (mode: 'add' | 'replace') => {
+    const file = importDialog.file;
     if (!file) return;
 
     const reader = new FileReader();
@@ -135,29 +144,34 @@ export default function ReasonsPage() {
         }
 
         const newRazones: Omit<Razon, 'id'>[] = [];
+        const existingDescriptions = new Set(razones.map(r => r.descripcion.toLowerCase()));
+
         for (let i = 1; i < lines.length; i++) {
           const values = lines[i].split(',');
           const descripcion = values[descIndex]?.replace(/"/g, '').trim();
-          if (descripcion && !razones.some(r => r.descripcion.toLowerCase() === descripcion.toLowerCase())) {
-            newRazones.push({
-              descripcion: descripcion,
-              isQuickReason: quickIndex !== -1 ? (values[quickIndex]?.trim().toLowerCase() === 'true') : false
-            });
+          
+          if (descripcion) {
+            const isQuickReason = quickIndex !== -1 ? (values[quickIndex]?.trim().toLowerCase() === 'true') : false;
+            if (mode === 'add' && !existingDescriptions.has(descripcion.toLowerCase())) {
+                newRazones.push({ descripcion, isQuickReason });
+            } else if (mode === 'replace') {
+                newRazones.push({ descripcion, isQuickReason });
+            }
           }
         }
         
         if (newRazones.length > 0) {
-          await addMultipleRazones(newRazones);
-          toast({ title: 'Éxito', description: `${newRazones.length} nuevas razones importadas.` });
+          await importRazones(newRazones, mode);
+          toast({ title: 'Éxito', description: `${newRazones.length} nuevas razones importadas en modo "${mode}".` });
         } else {
-          toast({ title: 'Información', description: 'No se encontraron nuevas razones para importar.' });
+          toast({ title: 'Información', description: 'No se encontraron nuevas razones para importar o no hay cambios.' });
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Un error desconocido ocurrió.';
         toast({ variant: 'destructive', title: 'Error de importación', description: `No se pudo procesar el archivo CSV. ${message}` });
       } finally {
-        // Reset file input
         if(importFileInputRef.current) importFileInputRef.current.value = '';
+        setImportDialog({ isOpen: false, file: null });
       }
     };
     reader.readAsText(file);
@@ -227,7 +241,7 @@ export default function ReasonsPage() {
             </Select>
              <div className="flex gap-2">
                 <Button onClick={handleImportClick} variant="outline" className="w-full md:w-auto"><Upload className="mr-2 h-4 w-4"/>Importar CSV</Button>
-                <input type="file" ref={importFileInputRef} onChange={handleImport} className="hidden" accept=".csv"/>
+                <input type="file" ref={importFileInputRef} onChange={handleFileSelected} className="hidden" accept=".csv"/>
                 <Button onClick={exportToCSV} variant="outline" className="w-full md:w-auto"><Download className="mr-2 h-4 w-4"/>Exportar CSV</Button>
             </div>
           </div>
@@ -289,6 +303,22 @@ export default function ReasonsPage() {
           </TooltipProvider>
         </CardContent>
       </Card>
+
+       <AlertDialog open={importDialog.isOpen} onOpenChange={(isOpen) => setImportDialog({isOpen, file: isOpen ? importDialog.file : null})}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Importar Razones</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Cómo deseas importar las razones del archivo?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="sm:justify-center">
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={() => processImport('add')}>Agregar a existentes</AlertDialogAction>
+            <AlertDialogAction onClick={() => processImport('replace')} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Reemplazar todo</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
