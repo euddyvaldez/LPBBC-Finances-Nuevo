@@ -254,7 +254,7 @@ export default function ReasonsPage() {
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button size="icon" variant="ghost" onClick={() => handleToggleQuickReason(razon)}>
+                            <Button type="button" size="icon" variant="ghost" onClick={() => handleToggleQuickReason(razon)}>
                                 <Zap className={cn('h-5 w-5', razon.isQuickReason ? 'text-primary fill-primary' : 'text-muted-foreground')}/>
                             </Button>
                         </TooltipTrigger>
@@ -271,15 +271,15 @@ export default function ReasonsPage() {
                   <div className="flex items-center gap-2">
                     {editingId === razon.id ? (
                       <>
-                        <Button size="icon" variant="ghost" className="text-green-500 hover:text-green-600" onClick={() => handleSave(razon.id)}><Save className="h-4 w-4"/></Button>
-                        <Button size="icon" variant="ghost" className="text-red-500 hover:text-red-600" onClick={handleCancelEdit}><X className="h-4 w-4"/></Button>
+                        <Button type="button" size="icon" variant="ghost" className="text-green-500 hover:text-green-600" onClick={() => handleSave(razon.id)}><Save className="h-4 w-4"/></Button>
+                        <Button type="button" size="icon" variant="ghost" className="text-red-500 hover:text-red-600" onClick={handleCancelEdit}><X className="h-4 w-4"/></Button>
                       </>
                     ) : (
                       <>
-                        <Button size="icon" variant="ghost" onClick={() => handleEdit(razon)}><Pencil className="h-4 w-4"/></Button>
+                        <Button type="button" size="icon" variant="ghost" onClick={() => handleEdit(razon)}><Pencil className="h-4 w-4"/></Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button size="icon" variant="ghost" className="text-destructive"><Trash2 className="h-4 w-4"/></Button>
+                            <Button type="button" size="icon" variant="ghost" className="text-destructive"><Trash2 className="h-4 w-4"/></Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
