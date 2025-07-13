@@ -12,6 +12,7 @@ interface AppContextType {
   refetchData: () => void;
   addFinancialRecord: (record: Omit<FinancialRecord, 'id'>) => Promise<void>;
   addIntegrante: (nombre: string) => Promise<void>;
+  addMultipleIntegrantes: (integrantes: Omit<Integrante, 'id'>[]) => Promise<void>;
   updateIntegrante: (id: string, nombre: string) => Promise<void>;
   deleteIntegrante: (id: string) => Promise<void>;
   addRazon: (descripcion: string) => Promise<void>;
@@ -62,6 +63,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     fetchData();
   };
 
+  const handleAddMultipleIntegrantes = async (integrantes: Omit<Integrante, 'id'>[]) => {
+    await api.addMultipleIntegrantes(integrantes);
+    fetchData();
+  };
+
   const handleUpdateIntegrante = async (id: string, nombre: string) => {
     await api.updateIntegrante(id, nombre);
     fetchData();
@@ -101,6 +107,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     refetchData: fetchData,
     addFinancialRecord: handleAddFinancialRecord,
     addIntegrante: handleAddIntegrante,
+    addMultipleIntegrantes: handleAddMultipleIntegrantes,
     updateIntegrante: handleUpdateIntegrante,
     deleteIntegrante: handleDeleteIntegrante,
     addRazon: handleAddRazon,

@@ -4,14 +4,15 @@ import { useAppContext } from '@/contexts/AppProvider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Loader2, Pencil, Save, Trash2, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { Download, Loader2, Pencil, Save, Trash2, Upload, X } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { Integrante } from '@/types';
 
 export default function MembersPage() {
-  const { integrantes, addIntegrante, updateIntegrante, deleteIntegrante, financialRecords, loading } = useAppContext();
+  const { integrantes, addIntegrante, updateIntegrante, deleteIntegrante, financialRecords, loading, addMultipleIntegrantes } = useAppContext();
   const { toast } = useToast();
 
   const [newIntegranteName, setNewIntegranteName] = useState('');
@@ -19,6 +20,7 @@ export default function MembersPage() {
   const [editingName, setEditingName] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState('alpha-asc');
+  const importFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleAdd = async () => {
     if (!newIntegranteName.trim()) {
@@ -78,6 +80,72 @@ export default function MembersPage() {
     } catch (error) {
         toast({ variant: 'destructive', title: 'Error', description: 'No se pudo eliminar el integrante.' });
     }
+  };
+
+  const exportToCSV = () => {
+    const headers = ['nombre', 'isProtected'];
+    const rows = integrantes.map(i => [
+      `"${i.nombre.replace(/"/g, '""')}"`,
+      !!i.isProtected
+    ].join(','));
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "integrantes.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({ title: 'Éxito', description: 'Integrantes exportados a CSV.' });
+  };
+  
+  const handleImportClick = () => {
+    importFileInputRef.current?.click();
+  };
+
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const text = e.target?.result;
+      if (typeof text !== 'string') {
+        toast({ variant: 'destructive', title: 'Error', description: 'No se pudo leer el archivo.' });
+        return;
+      }
+      try {
+        const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+        const headers = lines[0].split(',').map(h => h.trim());
+        const nombreIndex = headers.indexOf('nombre');
+
+        if (nombreIndex === -1) {
+          throw new Error('La columna "nombre" no fue encontrada en el CSV.');
+        }
+
+        const newIntegrantes: Omit<Integrante, 'id'>[] = [];
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(',');
+          const nombre = values[nombreIndex]?.replace(/"/g, '').trim();
+          if (nombre && !integrantes.some(inte => inte.nombre.toLowerCase() === nombre.toLowerCase())) {
+            newIntegrantes.push({ nombre });
+          }
+        }
+        
+        if (newIntegrantes.length > 0) {
+          await addMultipleIntegrantes(newIntegrantes);
+          toast({ title: 'Éxito', description: `${newIntegrantes.length} nuevos integrantes importados.` });
+        } else {
+          toast({ title: 'Información', description: 'No se encontraron nuevos integrantes para importar.' });
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Un error desconocido ocurrió.';
+        toast({ variant: 'destructive', title: 'Error de importación', description: `No se pudo procesar el archivo CSV. ${message}` });
+      } finally {
+        if(importFileInputRef.current) importFileInputRef.current.value = '';
+      }
+    };
+    reader.readAsText(file);
   };
 
   const filteredAndSortedIntegrantes = useMemo(() => {
@@ -142,6 +210,11 @@ export default function MembersPage() {
                     <SelectItem value="id-desc">ID (Descendente)</SelectItem>
                 </SelectContent>
             </Select>
+            <div className="flex gap-2">
+              <Button onClick={handleImportClick} variant="outline" className="w-full md:w-auto"><Upload className="mr-2 h-4 w-4"/>Importar CSV</Button>
+              <input type="file" ref={importFileInputRef} onChange={handleImport} className="hidden" accept=".csv"/>
+              <Button onClick={exportToCSV} variant="outline" className="w-full md:w-auto"><Download className="mr-2 h-4 w-4"/>Exportar CSV</Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

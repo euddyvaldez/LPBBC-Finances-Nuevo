@@ -182,10 +182,10 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
     const headers = ['Fecha', 'Integrante', 'Movimiento', 'Razón', 'Descripción', 'Monto'];
     const rows = filteredRecords.map(r => [
       r.fecha,
-      getIntegranteName(r.integranteId).replace(/,/g, ''),
+      `"${getIntegranteName(r.integranteId).replace(/"/g, '""')}"`,
       r.movimiento,
-      getRazonDesc(r.razonId).replace(/,/g, ''),
-      r.descripcion.replace(/,/g, ''),
+      `"${getRazonDesc(r.razonId).replace(/"/g, '""')}"`,
+      `"${r.descripcion.replace(/"/g, '""')}"`,
       r.monto
     ].join(','));
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows].join('\n');

@@ -49,6 +49,16 @@ export const addIntegrante = async (nombre: string): Promise<Integrante> => {
   return newIntegrante;
 };
 
+export const addMultipleIntegrantes = async (newIntegrantes: Omit<Integrante, 'id'>[]): Promise<void> => {
+  await simulateDbDelay();
+  const integrantesToAdd = newIntegrantes.map(i => ({
+    ...i,
+    id: String(Date.now() + Math.random()),
+    nombre: i.nombre.toUpperCase()
+  }));
+  integrantes.push(...integrantesToAdd);
+};
+
 export const updateIntegrante = async (id: string, nombre: string): Promise<Integrante> => {
   await simulateDbDelay();
   const integrante = integrantes.find(i => i.id === id);
