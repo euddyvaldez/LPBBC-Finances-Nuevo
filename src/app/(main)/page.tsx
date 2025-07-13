@@ -1,13 +1,17 @@
+
 'use client';
 
 import { useAppContext } from '@/contexts/AppProvider';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, ArrowRight, Zap, PieChart } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { getCitas } from '@/lib/data';
-import type { Cita } from '@/types';
+import type { Cita, FinancialRecord } from '@/types';
+import Link from 'next/link';
+import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 export default function DashboardPage() {
   const { financialRecords, loading } = useAppContext();
@@ -19,7 +23,9 @@ export default function DashboardPage() {
     const fetchCitas = async () => {
       const fetchedCitas = await getCitas();
       setCitas(fetchedCitas);
-      setCurrentCitaIndex(Math.floor(Math.random() * fetchedCitas.length));
+      if (fetchedCitas.length > 0) {
+        setCurrentCitaIndex(Math.floor(Math.random() * fetchedCitas.length));
+      }
     };
     fetchCitas();
   }, []);
@@ -34,8 +40,28 @@ export default function DashboardPage() {
     return () => clearInterval(timer);
   }, [citas.length]);
 
-  const balance = useMemo(() => {
-    return financialRecords.reduce((acc, record) => acc + record.monto, 0);
+  const { balance, monthlyIncome, monthlyExpenses, recentRecords } = useMemo(() => {
+    const balance = financialRecords.reduce((acc, record) => acc + record.monto, 0);
+    
+    const now = new Date();
+    const monthStart = startOfMonth(now);
+    const monthEnd = endOfMonth(now);
+
+    const monthlyRecords = financialRecords.filter(r => isWithinInterval(parseISO(r.fecha), { start: monthStart, end: monthEnd }));
+    
+    const monthlyIncome = monthlyRecords
+        .filter(r => r.movimiento === 'INGRESOS')
+        .reduce((acc, r) => acc + r.monto, 0);
+        
+    const monthlyExpenses = monthlyRecords
+        .filter(r => r.movimiento === 'GASTOS')
+        .reduce((acc, r) => acc + r.monto, 0);
+
+    const recentRecords = [...financialRecords]
+      .sort((a, b) => parseISO(b.fecha).getTime() - parseISO(a.fecha).getTime())
+      .slice(0, 5);
+
+    return { balance, monthlyIncome, monthlyExpenses, recentRecords };
   }, [financialRecords]);
 
   const formatCurrency = (amount: number) => {
@@ -57,21 +83,17 @@ export default function DashboardPage() {
     <div className="space-y-8">
       <h1 className="text-3xl font-bold tracking-tight">Inicio</h1>
       
-      <div className="flex flex-col items-center justify-center text-center">
-        <Card className="w-full max-w-md shadow-lg">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {/* Main Balance Card */}
+        <Card className="lg:col-span-2 shadow-lg">
           <CardHeader>
             <CardTitle className="text-2xl font-semibold text-muted-foreground">
               Balance General
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-6">
+          <CardContent className="space-y-6 text-center">
             {balanceVisible ? (
-              <p
-                className={cn(
-                  'text-5xl font-bold tracking-tighter',
-                  balance >= 0 ? 'text-green-500' : 'text-red-500'
-                )}
-              >
+              <p className={cn('text-5xl font-bold tracking-tighter', balance >= 0 ? 'text-green-500' : 'text-red-500')}>
                 {formatCurrency(balance)}
               </p>
             ) : (
@@ -79,18 +101,80 @@ export default function DashboardPage() {
                 -- OCULTO --
               </p>
             )}
-            <Button
-              variant="ghost"
-              onClick={() => setBalanceVisible(!balanceVisible)}
-            >
+            <Button variant="ghost" onClick={() => setBalanceVisible(!balanceVisible)}>
               {balanceVisible ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
               {balanceVisible ? 'Ocultar' : 'Mostrar'} Balance
             </Button>
           </CardContent>
         </Card>
+
+        {/* Quick Actions */}
+        <div className="space-y-4">
+            <Card className="h-full flex flex-col justify-center">
+                <CardHeader>
+                    <CardTitle>Accesos Directos</CardTitle>
+                </CardHeader>
+                <CardContent className="flex flex-col gap-3">
+                     <Link href="/quick-record" passHref>
+                        <Button className="w-full justify-start"><Zap className="mr-2"/>Registro Rápido</Button>
+                     </Link>
+                     <Link href="/financial-panel" passHref>
+                        <Button className="w-full justify-start"><PieChart className="mr-2"/>Panel Financiero</Button>
+                     </Link>
+                </CardContent>
+            </Card>
+        </div>
+
+        {/* Monthly Summary */}
+        <Card>
+            <CardHeader>
+                <CardTitle>Resumen del Mes</CardTitle>
+                <CardDescription>{format(new Date(), 'MMMM yyyy', { locale: es })}</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Ingresos</span>
+                    <span className="font-bold text-green-500">{formatCurrency(monthlyIncome)}</span>
+                </div>
+                 <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Gastos</span>
+                    <span className="font-bold text-red-500">{formatCurrency(monthlyExpenses)}</span>
+                </div>
+            </CardContent>
+        </Card>
+
+        {/* Recent Records */}
+        <Card className="lg:col-span-2">
+            <CardHeader>
+                <CardTitle>Registros Recientes</CardTitle>
+                <CardDescription>Las últimas 5 transacciones registradas.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {recentRecords.length > 0 ? (
+                    <ul className="space-y-3">
+                        {recentRecords.map((record) => (
+                           <li key={record.id} className="flex justify-between items-center">
+                               <div>
+                                   <p className="font-medium">{record.descripcion}</p>
+                                   <p className="text-sm text-muted-foreground">{format(parseISO(record.fecha), 'dd MMM yyyy', { locale: es })}</p>
+                               </div>
+                               <span className={cn('font-mono font-semibold', record.monto >= 0 ? 'text-green-500' : 'text-red-500')}>
+                                   {formatCurrency(record.monto)}
+                               </span>
+                           </li>
+                        ))}
+                    </ul>
+                ) : (
+                     <p className="text-center text-muted-foreground py-4">No hay registros recientes.</p>
+                )}
+                 <Button variant="link" asChild className="p-0 h-auto mt-4">
+                    <Link href="/records">Ver todos los registros <ArrowRight className="ml-1 h-4 w-4"/></Link>
+                </Button>
+            </CardContent>
+        </Card>
       </div>
-      
-      <Card className="w-full max-w-2xl mx-auto shadow-md">
+
+      <Card className="w-full shadow-md">
         <CardContent className="p-6">
             {citas.length > 0 ? (
                  <blockquote className="text-center italic">
