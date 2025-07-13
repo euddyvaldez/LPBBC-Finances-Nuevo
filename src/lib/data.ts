@@ -33,7 +33,13 @@ const citas: Cita[] = [
 
 const simulateDbDelay = (ms = 50) => new Promise(res => setTimeout(res, ms));
 
-const createNewId = () => String(Date.now() + Math.random());
+const createNewId = <T extends { id: string }>(items: T[]): string => {
+  const maxId = items.reduce((max, item) => {
+    const idNum = parseInt(item.id, 10);
+    return !isNaN(idNum) && idNum > max ? idNum : max;
+  }, 0);
+  return String(maxId + 1);
+};
 
 
 // --- API Functions ---
@@ -46,18 +52,27 @@ export const getIntegrantes = async (): Promise<Integrante[]> => {
 
 export const addIntegrante = async (nombre: string): Promise<Integrante> => {
   await simulateDbDelay();
-  const newIntegrante: Integrante = { id: createNewId(), nombre: nombre.toUpperCase() };
+  const newIntegrante: Integrante = { id: createNewId(integrantes), nombre: nombre.toUpperCase() };
   integrantes.push(newIntegrante);
   return newIntegrante;
 };
 
 export const importIntegrantes = async (integrantesToImport: Omit<Integrante, 'id'>[], mode: 'add' | 'replace'): Promise<void> => {
   await simulateDbDelay();
-  const newIntegrantesWithIds = integrantesToImport.map(i => ({
-    ...i,
-    id: createNewId(),
-    nombre: i.nombre.toUpperCase(),
-  }));
+  
+  let currentMaxId = integrantes.reduce((max, item) => {
+    const idNum = parseInt(item.id, 10);
+    return !isNaN(idNum) && idNum > max ? idNum : max;
+  }, 0);
+
+  const newIntegrantesWithIds = integrantesToImport.map(i => {
+    currentMaxId++;
+    return {
+      ...i,
+      id: String(currentMaxId),
+      nombre: i.nombre.toUpperCase(),
+    }
+  });
 
   if (mode === 'replace') {
     const protectedIntegrantes = integrantes.filter(i => i.isProtected);
@@ -92,18 +107,27 @@ export const getRazones = async (): Promise<Razon[]> => {
 
 export const addRazon = async (descripcion: string): Promise<Razon> => {
     await simulateDbDelay();
-    const newRazon: Razon = { id: createNewId(), descripcion: descripcion.toUpperCase(), isQuickReason: false };
+    const newRazon: Razon = { id: createNewId(razones), descripcion: descripcion.toUpperCase(), isQuickReason: false };
     razones.push(newRazon);
     return newRazon;
 };
 
 export const importRazones = async (razonesToImport: Omit<Razon, 'id'>[], mode: 'add' | 'replace'): Promise<void> => {
   await simulateDbDelay();
-  const newRazonesWithIds = razonesToImport.map(r => ({
-    ...r,
-    id: createNewId(),
-    descripcion: r.descripcion.toUpperCase(),
-  }));
+
+  let currentMaxId = razones.reduce((max, item) => {
+    const idNum = parseInt(item.id, 10);
+    return !isNaN(idNum) && idNum > max ? idNum : max;
+  }, 0);
+
+  const newRazonesWithIds = razonesToImport.map(r => {
+    currentMaxId++;
+    return {
+      ...r,
+      id: String(currentMaxId),
+      descripcion: r.descripcion.toUpperCase(),
+    }
+  });
 
   if (mode === 'replace') {
     razones = newRazonesWithIds;
@@ -144,14 +168,21 @@ export const addFinancialRecord = async (record: Omit<FinancialRecord, 'id'>): P
       monto = Math.abs(monto);
   }
   
-  const newRecord: FinancialRecord = { ...record, id: createNewId(), monto };
+  const newRecord: FinancialRecord = { ...record, id: createNewId(financialRecords), monto };
   financialRecords.push(newRecord);
   return newRecord;
 };
 
 export const importFinancialRecords = async (recordsToImport: Omit<FinancialRecord, 'id'>[], mode: 'add' | 'replace'): Promise<void> => {
   await simulateDbDelay();
+
+  let currentMaxId = financialRecords.reduce((max, item) => {
+    const idNum = parseInt(item.id, 10);
+    return !isNaN(idNum) && idNum > max ? idNum : max;
+  }, 0);
+
   const newRecordsWithIds = recordsToImport.map(r => {
+    currentMaxId++;
     let monto = r.monto;
     if ((r.movimiento === 'GASTOS' || r.movimiento === 'INVERSION') && monto > 0) {
         monto = -monto;
@@ -162,7 +193,7 @@ export const importFinancialRecords = async (recordsToImport: Omit<FinancialReco
     return {
       ...r,
       monto,
-      id: createNewId(),
+      id: String(currentMaxId),
     }
   });
 
