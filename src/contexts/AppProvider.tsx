@@ -56,52 +56,92 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const handleAddFinancialRecord = async (record: Omit<FinancialRecord, 'id'>) => {
     await api.addFinancialRecord(record);
-    fetchData();
+    await fetchData();
   };
   
   const handleImportFinancialRecords = async (records: Omit<FinancialRecord, 'id'>[], mode: 'add' | 'replace') => {
     await api.importFinancialRecords(records, mode);
-    fetchData();
+    await fetchData();
   };
 
   const handleAddIntegrante = async (nombre: string) => {
     await api.addIntegrante(nombre);
-    fetchData();
+    await fetchData();
   };
 
   const handleImportIntegrantes = async (integrantes: Omit<Integrante, 'id'>[], mode: 'add' | 'replace') => {
     await api.importIntegrantes(integrantes, mode);
-    fetchData();
+    await fetchData();
   };
 
   const handleUpdateIntegrante = async (id: string, nombre: string) => {
-    await api.updateIntegrante(id, nombre);
-    fetchData();
+    // Optimistic UI update
+    setIntegrantes(prev => prev.map(i => i.id === id ? { ...i, nombre: nombre.toUpperCase() } : i));
+    try {
+      await api.updateIntegrante(id, nombre);
+    } catch (error) {
+      // Revert on error and refetch to be safe
+      console.error("Failed to update integrante:", error);
+      await fetchData();
+      throw error;
+    }
+    // Optionally refetch in the background to ensure consistency
+    // await fetchData();
   };
 
   const handleDeleteIntegrante = async (id: string) => {
-    await api.deleteIntegrante(id);
-    fetchData();
+    // Optimistic UI update
+    const originalIntegrantes = integrantes;
+    setIntegrantes(prev => prev.filter(i => i.id !== id));
+    try {
+      await api.deleteIntegrante(id);
+    } catch (error) {
+      // Revert on error
+      console.error("Failed to delete integrante:", error);
+      setIntegrantes(originalIntegrantes);
+      await fetchData();
+      throw error;
+    }
   };
   
   const handleAddRazon = async (descripcion: string) => {
     await api.addRazon(descripcion);
-    fetchData();
+    await fetchData();
   };
 
   const handleImportRazones = async (razones: Omit<Razon, 'id'>[], mode: 'add' | 'replace') => {
     await api.importRazones(razones, mode);
-    fetchData();
+    await fetchData();
   };
 
   const handleUpdateRazon = async (id: string, updates: Partial<Omit<Razon, 'id'>>) => {
-    await api.updateRazon(id, updates);
-    fetchData();
+    // Optimistic UI update
+    setRazones(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r));
+    try {
+      await api.updateRazon(id, updates);
+    } catch (error) {
+       // Revert on error and refetch to be safe
+      console.error("Failed to update razon:", error);
+      await fetchData();
+      throw error;
+    }
+     // Optionally refetch in the background to ensure consistency
+    // await fetchData();
   };
 
   const handleDeleteRazon = async (id: string) => {
-    await api.deleteRazon(id);
-    fetchData();
+    // Optimistic UI update
+    const originalRazones = razones;
+    setRazones(prev => prev.filter(r => r.id !== id));
+    try {
+        await api.deleteRazon(id);
+    } catch(error) {
+        // Revert on error
+        console.error("Failed to delete razon:", error);
+        setRazones(originalRazones);
+        await fetchData();
+        throw error;
+    }
   };
 
   const value = {
