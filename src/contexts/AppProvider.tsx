@@ -15,6 +15,7 @@ interface AppContextType {
   updateIntegrante: (id: string, nombre: string) => Promise<void>;
   deleteIntegrante: (id: string) => Promise<void>;
   addRazon: (descripcion: string) => Promise<void>;
+  addMultipleRazones: (razones: Omit<Razon, 'id'>[]) => Promise<void>;
   updateRazon: (id: string, updates: Partial<Omit<Razon, 'id'>>) => Promise<void>;
   deleteRazon: (id: string) => Promise<void>;
 }
@@ -76,6 +77,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     fetchData();
   };
 
+  const handleAddMultipleRazones = async (razones: Omit<Razon, 'id'>[]) => {
+    await api.addMultipleRazones(razones);
+    fetchData();
+  };
+
   const handleUpdateRazon = async (id: string, updates: Partial<Omit<Razon, 'id'>>) => {
     await api.updateRazon(id, updates);
     fetchData();
@@ -98,6 +104,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     updateIntegrante: handleUpdateIntegrante,
     deleteIntegrante: handleDeleteIntegrante,
     addRazon: handleAddRazon,
+    addMultipleRazones: handleAddMultipleRazones,
     updateRazon: handleUpdateRazon,
     deleteRazon: handleDeleteRazon,
   };

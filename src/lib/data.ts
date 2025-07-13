@@ -76,6 +76,16 @@ export const addRazon = async (descripcion: string): Promise<Razon> => {
     return newRazon;
 };
 
+export const addMultipleRazones = async (newRazones: Omit<Razon, 'id'>[]): Promise<void> => {
+  await simulateDbDelay();
+  const razonesToAdd = newRazones.map(r => ({
+    ...r,
+    id: String(Date.now() + Math.random()), // simple unique id
+    descripcion: r.descripcion.toUpperCase()
+  }));
+  razones.push(...razonesToAdd);
+};
+
 export const updateRazon = async (id: string, updates: Partial<Omit<Razon, 'id'>>): Promise<Razon> => {
     await simulateDbDelay();
     const razon = razones.find(r => r.id === id);

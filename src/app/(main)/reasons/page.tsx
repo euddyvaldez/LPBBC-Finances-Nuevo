@@ -3,16 +3,17 @@ import { useAppContext } from '@/contexts/AppProvider';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Loader2, Pencil, Save, Trash2, X, Zap } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { Download, Loader2, Pencil, Save, Trash2, Upload, X, Zap } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import type { Razon } from '@/types';
 
 export default function ReasonsPage() {
-  const { razones, addRazon, updateRazon, deleteRazon, financialRecords, loading } = useAppContext();
+  const { razones, addRazon, updateRazon, deleteRazon, financialRecords, loading, addMultipleRazones } = useAppContext();
   const { toast } = useToast();
 
   const [newRazonDesc, setNewRazonDesc] = useState('');
@@ -20,6 +21,7 @@ export default function ReasonsPage() {
   const [editingDesc, setEditingDesc] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState('alpha-asc');
+  const importFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleAdd = async () => {
     if (!newRazonDesc.trim()) {
@@ -89,6 +91,77 @@ export default function ReasonsPage() {
       toast({ variant: 'destructive', title: 'Error', description: 'No se pudo actualizar la razón.' });
     }
   };
+
+  const exportToCSV = () => {
+    const headers = ['descripcion', 'isQuickReason'];
+    const rows = razones.map(r => [
+      `"${r.descripcion.replace(/"/g, '""')}"`,
+      r.isQuickReason
+    ].join(','));
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "razones.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast({ title: 'Éxito', description: 'Razones exportadas a CSV.' });
+  };
+  
+  const handleImportClick = () => {
+    importFileInputRef.current?.click();
+  };
+
+  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const text = e.target?.result;
+      if (typeof text !== 'string') {
+        toast({ variant: 'destructive', title: 'Error', description: 'No se pudo leer el archivo.' });
+        return;
+      }
+      try {
+        const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
+        const headers = lines[0].split(',').map(h => h.trim());
+        const descIndex = headers.indexOf('descripcion');
+        const quickIndex = headers.indexOf('isQuickReason');
+
+        if (descIndex === -1) {
+          throw new Error('La columna "descripcion" no fue encontrada en el CSV.');
+        }
+
+        const newRazones: Omit<Razon, 'id'>[] = [];
+        for (let i = 1; i < lines.length; i++) {
+          const values = lines[i].split(',');
+          const descripcion = values[descIndex]?.replace(/"/g, '').trim();
+          if (descripcion && !razones.some(r => r.descripcion.toLowerCase() === descripcion.toLowerCase())) {
+            newRazones.push({
+              descripcion: descripcion,
+              isQuickReason: quickIndex !== -1 ? (values[quickIndex]?.trim().toLowerCase() === 'true') : false
+            });
+          }
+        }
+        
+        if (newRazones.length > 0) {
+          await addMultipleRazones(newRazones);
+          toast({ title: 'Éxito', description: `${newRazones.length} nuevas razones importadas.` });
+        } else {
+          toast({ title: 'Información', description: 'No se encontraron nuevas razones para importar.' });
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Un error desconocido ocurrió.';
+        toast({ variant: 'destructive', title: 'Error de importación', description: `No se pudo procesar el archivo CSV. ${message}` });
+      } finally {
+        // Reset file input
+        if(importFileInputRef.current) importFileInputRef.current.value = '';
+      }
+    };
+    reader.readAsText(file);
+  };
   
   const filteredAndSortedRazones = useMemo(() => {
     return razones
@@ -152,6 +225,11 @@ export default function ReasonsPage() {
                     <SelectItem value="id-desc">ID (Descendente)</SelectItem>
                 </SelectContent>
             </Select>
+             <div className="flex gap-2">
+                <Button onClick={handleImportClick} variant="outline" className="w-full md:w-auto"><Upload className="mr-2 h-4 w-4"/>Importar CSV</Button>
+                <input type="file" ref={importFileInputRef} onChange={handleImport} className="hidden" accept=".csv"/>
+                <Button onClick={exportToCSV} variant="outline" className="w-full md:w-auto"><Download className="mr-2 h-4 w-4"/>Exportar CSV</Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
