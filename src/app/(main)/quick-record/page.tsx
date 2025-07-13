@@ -1,3 +1,4 @@
+
 'use client';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -234,7 +235,7 @@ export default function QuickRecordPage() {
                                 </Button>
                             </FormControl>
                         </PopoverTrigger>
-                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" onOpenAutoFocus={(e) => e.preventDefault()}>
                             <Command>
                                 <CommandInput placeholder="Buscar integrante..." />
                                 <CommandList>
