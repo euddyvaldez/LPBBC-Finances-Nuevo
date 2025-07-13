@@ -84,7 +84,7 @@ const RecordsForm = () => {
                 <FormField control={form.control} name="fecha" render={({ field }) => (
                     <FormItem className="flex flex-col"><FormLabel>Fecha</FormLabel>
                         <Popover><PopoverTrigger asChild>
-                            <FormControl><Button variant={'outline'} className={cn('w-full pl-3 text-left font-normal',!field.value && 'text-muted-foreground')}>
+                            <FormControl><Button variant={'outline'} className={cn('w-full justify-start text-left font-normal',!field.value && 'text-muted-foreground')}>
                                 {field.value ? format(field.value, 'PPP', { locale: es }) : <span>Elige una fecha</span>}
                                 <CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button>
                             </FormControl>
@@ -305,10 +305,10 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
               </SelectContent>
             </Select>
             <Input placeholder="Buscar..." value={filter} onChange={(e) => setFilter(e.target.value)} className="flex-1"/>
-            <div className="flex gap-2">
-              <Button onClick={handleImportClick} variant="outline" className="w-full md:w-auto"><Upload className="mr-2 h-4 w-4"/>Importar CSV</Button>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Button onClick={handleImportClick} variant="outline" className="w-full"><Upload className="mr-2 h-4 w-4"/>Importar CSV</Button>
               <input type="file" ref={importFileInputRef} onChange={handleFileSelected} className="hidden" accept=".csv"/>
-              <Button onClick={exportToCSV} variant="outline" className="w-full md:w-auto"><Download className="mr-2 h-4 w-4"/>Exportar CSV</Button>
+              <Button onClick={exportToCSV} variant="outline" className="w-full"><Download className="mr-2 h-4 w-4"/>Exportar CSV</Button>
             </div>
           </div>
         </CardHeader>
