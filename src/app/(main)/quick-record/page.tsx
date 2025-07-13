@@ -65,6 +65,7 @@ export default function QuickRecordPage() {
   const { razones, integrantes, addFinancialRecord, loading } = useAppContext();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [integrantePopoverOpen, setIntegrantePopoverOpen] = useState(false);
 
   const form = useForm<z.infer<typeof quickRecordSchema>>({
     resolver: zodResolver(quickRecordSchema),
@@ -224,7 +225,7 @@ export default function QuickRecordPage() {
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                      <FormLabel>Integrante</FormLabel>
-                    <Popover>
+                    <Popover open={integrantePopoverOpen} onOpenChange={setIntegrantePopoverOpen}>
                         <PopoverTrigger asChild>
                             <FormControl>
                                 <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value && "text-muted-foreground")}>
@@ -244,7 +245,8 @@ export default function QuickRecordPage() {
                                         value={integrante.nombre}
                                         key={integrante.id}
                                         onSelect={() => {
-                                            form.setValue('integranteId', integrante.id)
+                                            form.setValue('integranteId', integrante.id);
+                                            setIntegrantePopoverOpen(false);
                                         }}
                                     >
                                         {integrante.nombre}

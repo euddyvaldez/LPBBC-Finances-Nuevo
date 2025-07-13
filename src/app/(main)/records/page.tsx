@@ -35,10 +35,12 @@ const RecordsForm = () => {
   const { razones, integrantes, addFinancialRecord, financialRecords } = useAppContext();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [integrantePopoverOpen, setIntegrantePopoverOpen] = useState(false);
+  const [razonPopoverOpen, setRazonPopoverOpen] = useState(false);
 
   const form = useForm<z.infer<typeof recordSchema>>({
     resolver: zodResolver(recordSchema),
-    defaultValues: { fecha: new Date(), movimiento: 'INGRESOS', descripcion: '' },
+    defaultValues: { fecha: new Date(), movimiento: 'INGRESOS', descripcion: '', monto: undefined },
   });
 
   const onSubmit = async (values: z.infer<typeof recordSchema>) => {
@@ -53,7 +55,7 @@ const RecordsForm = () => {
         ...form.getValues(),
         integranteId: '',
         razonId: '',
-        monto: 0,
+        monto: undefined,
         descripcion: ''
       });
     } catch (error) {
@@ -93,7 +95,7 @@ const RecordsForm = () => {
                     </FormItem>)} />
                 <FormField control={form.control} name="integranteId" render={({ field }) => (
                     <FormItem className="flex flex-col"><FormLabel>Integrante</FormLabel>
-                        <Popover><PopoverTrigger asChild>
+                        <Popover open={integrantePopoverOpen} onOpenChange={setIntegrantePopoverOpen}><PopoverTrigger asChild>
                             <FormControl><Button variant="outline" role="combobox" className={cn('w-full justify-between', !field.value && 'text-muted-foreground')}>
                                 {selectedIntegrante ? selectedIntegrante.nombre : 'Selecciona un integrante'}
                                 <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button>
@@ -103,7 +105,7 @@ const RecordsForm = () => {
                             <CommandInput placeholder="Buscar integrante..." />
                             <CommandList><CommandEmpty>No se encontró.</CommandEmpty><CommandGroup>
                                 {integrantes.map((i) => (
-                                    <CommandItem value={i.nombre} key={i.id} onSelect={() => form.setValue('integranteId', i.id)}>{i.nombre}</CommandItem>
+                                    <CommandItem value={i.nombre} key={i.id} onSelect={() => { form.setValue('integranteId', i.id); setIntegrantePopoverOpen(false); }}>{i.nombre}</CommandItem>
                                 ))}
                             </CommandGroup></CommandList>
                         </Command></PopoverContent>
@@ -111,7 +113,7 @@ const RecordsForm = () => {
                     </FormItem>)} />
                 <FormField control={form.control} name="razonId" render={({ field }) => (
                      <FormItem className="flex flex-col"><FormLabel>Razón</FormLabel>
-                        <Popover><PopoverTrigger asChild>
+                        <Popover open={razonPopoverOpen} onOpenChange={setRazonPopoverOpen}><PopoverTrigger asChild>
                             <FormControl><Button variant="outline" role="combobox" className={cn('w-full justify-between', !field.value && 'text-muted-foreground')}>
                                 {selectedRazon ? selectedRazon.descripcion : 'Selecciona una razón'}
                                 <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button>
@@ -121,7 +123,7 @@ const RecordsForm = () => {
                             <CommandInput placeholder="Buscar razón..." />
                             <CommandList><CommandEmpty>No se encontró.</CommandEmpty><CommandGroup>
                                 {razones.map((r) => (
-                                    <CommandItem value={r.descripcion} key={r.id} onSelect={() => form.setValue('razonId', r.id)}>{r.descripcion}</CommandItem>
+                                    <CommandItem value={r.descripcion} key={r.id} onSelect={() => { form.setValue('razonId', r.id); setRazonPopoverOpen(false); }}>{r.descripcion}</CommandItem>
                                 ))}
                             </CommandGroup></CommandList>
                         </Command></PopoverContent>
