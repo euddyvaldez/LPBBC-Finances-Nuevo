@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Loader2, Search } from 'lucide-react';
+import { Calendar as CalendarIcon, Loader2, Check } from 'lucide-react';
 import {
   Form,
   FormControl,
@@ -122,10 +122,6 @@ export default function QuickRecordPage() {
     }
   };
 
-  const selectedIntegrante = integrantes.find(
-    (i) => i.id === form.watch('integranteId')
-  );
-
   return (
     <div className="space-y-6">
        <Card className="max-w-2xl mx-auto">
@@ -230,8 +226,7 @@ export default function QuickRecordPage() {
                         <PopoverTrigger asChild>
                             <FormControl>
                                 <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value && "text-muted-foreground")}>
-                                    {selectedIntegrante ? selectedIntegrante.nombre : "Selecciona un integrante"}
-                                    <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                    {integrantes.find((i) => i.id === field.value)?.nombre ?? "Selecciona un integrante"}
                                 </Button>
                             </FormControl>
                         </PopoverTrigger>
@@ -243,13 +238,19 @@ export default function QuickRecordPage() {
                                 <CommandGroup>
                                     {integrantes.map((integrante) => (
                                     <CommandItem
-                                        value={integrante.nombre}
+                                        value={integrante.id}
                                         key={integrante.id}
-                                        onSelect={() => {
-                                            form.setValue('integranteId', integrante.id);
-                                            setIntegrantePopoverOpen(false);
+                                        onSelect={(currentValue) => {
+                                          form.setValue('integranteId', currentValue === field.value ? '' : currentValue);
+                                          setIntegrantePopoverOpen(false);
                                         }}
                                     >
+                                        <Check
+                                            className={cn(
+                                                "mr-2 h-4 w-4",
+                                                field.value === integrante.id ? "opacity-100" : "opacity-0"
+                                            )}
+                                        />
                                         {integrante.nombre}
                                     </CommandItem>
                                     ))}

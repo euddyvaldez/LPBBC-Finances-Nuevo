@@ -10,7 +10,7 @@ import { useState, useMemo, useRef } from 'react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { Download, Loader2, Upload, BadgeDollarSign, User, Tag, FileText, Calendar as CalendarIcon, Search } from 'lucide-react';
+import { Download, Loader2, Upload, Tag, User, Calendar as CalendarIcon, Search, Check } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -66,9 +66,6 @@ const RecordsForm = () => {
     }
   };
   
-  const selectedIntegrante = integrantes.find((i) => i.id === form.watch('integranteId'));
-  const selectedRazon = razones.find((r) => r.id === form.watch('razonId'));
-
   const uniqueDescriptions = useMemo(() => {
     const descriptions = new Set(financialRecords.map(r => r.descripcion));
     return Array.from(descriptions);
@@ -94,42 +91,51 @@ const RecordsForm = () => {
                         <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
                         </Popover><FormMessage />
                     </FormItem>)} />
+                
                 <FormField control={form.control} name="integranteId" render={({ field }) => (
                     <FormItem className="flex flex-col"><FormLabel>Integrante</FormLabel>
                         <Popover open={integrantePopoverOpen} onOpenChange={setIntegrantePopoverOpen}><PopoverTrigger asChild>
                             <FormControl><Button variant="outline" role="combobox" className={cn('w-full justify-between', !field.value && 'text-muted-foreground')}>
-                                {selectedIntegrante ? selectedIntegrante.nombre : 'Selecciona un integrante'}
-                                <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button>
+                                {integrantes.find((i) => i.id === field.value)?.nombre ?? "Selecciona un integrante"}
+                                </Button>
                             </FormControl>
                         </PopoverTrigger>
                         <PopoverContent className="w-[--radix-popover-trigger-width] p-0" ><Command>
                             <CommandInput placeholder="Buscar integrante..." />
                             <CommandList><CommandEmpty>No se encontró.</CommandEmpty><CommandGroup>
                                 {integrantes.map((i) => (
-                                    <CommandItem value={i.nombre} key={i.id} onSelect={() => { form.setValue('integranteId', i.id); setIntegrantePopoverOpen(false); }}>{i.nombre}</CommandItem>
+                                    <CommandItem value={i.id} key={i.id} onSelect={(currentValue) => { form.setValue('integranteId', currentValue === field.value ? '' : currentValue); setIntegrantePopoverOpen(false); }}>
+                                    <Check className={cn("mr-2 h-4 w-4", field.value === i.id ? "opacity-100" : "opacity-0")} />
+                                    {i.nombre}
+                                    </CommandItem>
                                 ))}
                             </CommandGroup></CommandList>
                         </Command></PopoverContent>
                         </Popover><FormMessage />
                     </FormItem>)} />
+
                 <FormField control={form.control} name="razonId" render={({ field }) => (
                      <FormItem className="flex flex-col"><FormLabel>Razón</FormLabel>
                         <Popover open={razonPopoverOpen} onOpenChange={setRazonPopoverOpen}><PopoverTrigger asChild>
                             <FormControl><Button variant="outline" role="combobox" className={cn('w-full justify-between', !field.value && 'text-muted-foreground')}>
-                                {selectedRazon ? selectedRazon.descripcion : 'Selecciona una razón'}
-                                <Search className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button>
+                                {razones.find((r) => r.id === field.value)?.descripcion ?? "Selecciona una razón"}
+                               </Button>
                             </FormControl>
                         </PopoverTrigger>
                         <PopoverContent className="w-[--radix-popover-trigger-width] p-0" ><Command>
                             <CommandInput placeholder="Buscar razón..." />
                             <CommandList><CommandEmpty>No se encontró.</CommandEmpty><CommandGroup>
                                 {razones.map((r) => (
-                                    <CommandItem value={r.descripcion} key={r.id} onSelect={() => { form.setValue('razonId', r.id); setRazonPopoverOpen(false); }}>{r.descripcion}</CommandItem>
+                                    <CommandItem value={r.id} key={r.id} onSelect={(currentValue) => { form.setValue('razonId', currentValue === field.value ? '' : currentValue); setRazonPopoverOpen(false); }}>
+                                        <Check className={cn("mr-2 h-4 w-4", field.value === r.id ? "opacity-100" : "opacity-0")} />
+                                        {r.descripcion}
+                                    </CommandItem>
                                 ))}
                             </CommandGroup></CommandList>
                         </Command></PopoverContent>
                         </Popover><FormMessage />
                     </FormItem>)} />
+
                 <FormField control={form.control} name="monto" render={({ field }) => (
                     <FormItem><FormLabel>Monto</FormLabel><FormControl><Input type="number" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
                 <FormField control={form.control} name="movimiento" render={({ field }) => (
