@@ -104,7 +104,7 @@ const RecordsForm = () => {
                             <CommandInput placeholder="Buscar integrante..." />
                             <CommandList><CommandEmpty>No se encontró.</CommandEmpty><CommandGroup>
                                 {integrantes.map((i) => (
-                                    <CommandItem value={i.id} key={i.id} onSelect={(currentValue) => { form.setValue('integranteId', currentValue === field.value ? '' : currentValue); setIntegrantePopoverOpen(false); }}>
+                                    <CommandItem value={i.nombre} key={i.id} onSelect={() => { form.setValue('integranteId', i.id); setIntegrantePopoverOpen(false); }}>
                                     <Check className={cn("mr-2 h-4 w-4", field.value === i.id ? "opacity-100" : "opacity-0")} />
                                     {i.nombre}
                                     </CommandItem>
@@ -119,14 +119,14 @@ const RecordsForm = () => {
                         <Popover open={razonPopoverOpen} onOpenChange={setRazonPopoverOpen}><PopoverTrigger asChild>
                             <FormControl><Button variant="outline" role="combobox" className={cn('w-full justify-between', !field.value && 'text-muted-foreground')}>
                                 {razones.find((r) => r.id === field.value)?.descripcion ?? "Selecciona una razón"}
-                               </Button>
+                                </Button>
                             </FormControl>
                         </PopoverTrigger>
                         <PopoverContent className="w-[--radix-popover-trigger-width] p-0" ><Command>
                             <CommandInput placeholder="Buscar razón..." />
                             <CommandList><CommandEmpty>No se encontró.</CommandEmpty><CommandGroup>
                                 {razones.map((r) => (
-                                    <CommandItem value={r.id} key={r.id} onSelect={(currentValue) => { form.setValue('razonId', currentValue === field.value ? '' : currentValue); setRazonPopoverOpen(false); }}>
+                                    <CommandItem value={r.descripcion} key={r.id} onSelect={() => { form.setValue('razonId', r.id); setRazonPopoverOpen(false); }}>
                                         <Check className={cn("mr-2 h-4 w-4", field.value === r.id ? "opacity-100" : "opacity-0")} />
                                         {r.descripcion}
                                     </CommandItem>

@@ -238,10 +238,10 @@ export default function QuickRecordPage() {
                                 <CommandGroup>
                                     {integrantes.map((integrante) => (
                                     <CommandItem
-                                        value={integrante.id}
+                                        value={integrante.nombre}
                                         key={integrante.id}
-                                        onSelect={(currentValue) => {
-                                          form.setValue('integranteId', currentValue === field.value ? '' : currentValue);
+                                        onSelect={() => {
+                                          form.setValue('integranteId', integrante.id);
                                           setIntegrantePopoverOpen(false);
                                         }}
                                     >
