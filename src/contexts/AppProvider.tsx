@@ -1,3 +1,4 @@
+
 'use client';
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import type { FinancialRecord, Integrante, Razon } from '@/types';
@@ -11,6 +12,8 @@ interface AppContextType {
   error: Error | null;
   refetchData: () => void;
   addFinancialRecord: (record: Omit<FinancialRecord, 'id'>) => Promise<void>;
+  updateFinancialRecord: (id: string, record: Partial<Omit<FinancialRecord, 'id'>>) => Promise<void>;
+  deleteFinancialRecord: (id: string) => Promise<void>;
   importFinancialRecords: (records: Omit<FinancialRecord, 'id'>[], mode: 'add' | 'replace') => Promise<void>;
   addIntegrante: (nombre: string) => Promise<void>;
   importIntegrantes: (integrantes: Omit<Integrante, 'id'>[], mode: 'add' | 'replace') => Promise<void>;
@@ -59,6 +62,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     await fetchData();
   };
   
+  const handleUpdateFinancialRecord = async (id: string, record: Partial<Omit<FinancialRecord, 'id'>>) => {
+    await api.updateFinancialRecord(id, record);
+    await fetchData();
+  };
+
+  const handleDeleteFinancialRecord = async (id: string) => {
+    await api.deleteFinancialRecord(id);
+    await fetchData();
+  };
+
   const handleImportFinancialRecords = async (records: Omit<FinancialRecord, 'id'>[], mode: 'add' | 'replace') => {
     await api.importFinancialRecords(records, mode);
     await fetchData();
@@ -152,6 +165,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     error,
     refetchData: fetchData,
     addFinancialRecord: handleAddFinancialRecord,
+    updateFinancialRecord: handleUpdateFinancialRecord,
+    deleteFinancialRecord: handleDeleteFinancialRecord,
     importFinancialRecords: handleImportFinancialRecords,
     addIntegrante: handleAddIntegrante,
     importIntegrantes: handleImportIntegrantes,

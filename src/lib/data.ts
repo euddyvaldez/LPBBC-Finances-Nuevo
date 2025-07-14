@@ -1,3 +1,4 @@
+
 import type { FinancialRecord, Integrante, Razon, Cita } from '@/types';
 
 // Mock Data
@@ -172,6 +173,33 @@ export const addFinancialRecord = async (record: Omit<FinancialRecord, 'id'>): P
   financialRecords.push(newRecord);
   return newRecord;
 };
+
+export const updateFinancialRecord = async (id: string, updates: Partial<Omit<FinancialRecord, 'id'>>): Promise<FinancialRecord> => {
+  await simulateDbDelay();
+  const recordIndex = financialRecords.findIndex(r => r.id === id);
+  if (recordIndex === -1) throw new Error('Registro no encontrado');
+  
+  const updatedRecord = { ...financialRecords[recordIndex], ...updates };
+
+  if (updates.monto !== undefined) {
+    let monto = updates.monto;
+    if ((updatedRecord.movimiento === 'GASTOS' || updatedRecord.movimiento === 'INVERSION') && monto > 0) {
+        monto = -monto;
+    }
+    if (updatedRecord.movimiento === 'INGRESOS' && monto < 0) {
+        monto = Math.abs(monto);
+    }
+    updatedRecord.monto = monto;
+  }
+  
+  financialRecords[recordIndex] = updatedRecord as FinancialRecord;
+  return updatedRecord as FinancialRecord;
+}
+
+export const deleteFinancialRecord = async (id: string): Promise<void> => {
+    await simulateDbDelay();
+    financialRecords = financialRecords.filter(r => r.id !== id);
+}
 
 export const importFinancialRecords = async (recordsToImport: Omit<FinancialRecord, 'id'>[], mode: 'add' | 'replace'): Promise<void> => {
   await simulateDbDelay();

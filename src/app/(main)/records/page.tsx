@@ -6,11 +6,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { Download, Loader2, Upload, Tag, User, Calendar as CalendarIcon } from 'lucide-react';
+import { Download, Loader2, Upload, Tag, User, Calendar as CalendarIcon, Pencil, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -19,10 +19,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import type { FinancialRecord, Movimiento } from '@/types';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Autocomplete } from '@/components/Autocomplete';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 const recordSchema = z.object({
+  id: z.string().optional(),
   fecha: z.date({ required_error: 'La fecha es requerida.' }),
   integranteId: z.string().min(1, 'El integrante es requerido.'),
   razonId: z.string().min(1, 'La razón es requerida.'),
@@ -31,34 +33,61 @@ const recordSchema = z.object({
   descripcion: z.string().optional(),
 });
 
-const RecordsForm = () => {
-  const { razones, integrantes, addFinancialRecord, financialRecords } = useAppContext();
+type RecordFormData = z.infer<typeof recordSchema>;
+
+const RecordsForm = ({ record, onFinished }: { record?: RecordFormData, onFinished?: () => void }) => {
+  const { razones, integrantes, addFinancialRecord, updateFinancialRecord, financialRecords } = useAppContext();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const form = useForm<z.infer<typeof recordSchema>>({
+  const form = useForm<RecordFormData>({
     resolver: zodResolver(recordSchema),
-    defaultValues: { fecha: new Date(), movimiento: 'INGRESOS', descripcion: '', monto: undefined },
   });
 
-  const onSubmit = async (values: z.infer<typeof recordSchema>) => {
+  useEffect(() => {
+    if (record) {
+      form.reset({
+        ...record,
+        fecha: record.fecha ? parseISO(record.fecha as unknown as string) : new Date(),
+      });
+    } else {
+       form.reset({
+        fecha: new Date(),
+        movimiento: 'INGRESOS',
+        descripcion: '',
+        monto: undefined,
+        integranteId: '',
+        razonId: '',
+      });
+    }
+  }, [record, form]);
+
+  const onSubmit = async (values: RecordFormData) => {
     setIsSubmitting(true);
     try {
-      await addFinancialRecord({
+      const recordData = {
         ...values,
         fecha: format(values.fecha, 'yyyy-MM-dd'),
         descripcion: values.descripcion || '',
-      });
-      toast({ title: 'Éxito', description: 'Registro agregado correctamente.' });
-      form.reset({
-        ...form.getValues(),
-        integranteId: '',
-        razonId: '',
-        monto: undefined,
-        descripcion: ''
-      });
+      };
+      
+      if(record?.id) {
+        await updateFinancialRecord(record.id, recordData);
+        toast({ title: 'Éxito', description: 'Registro actualizado correctamente.' });
+      } else {
+        await addFinancialRecord(recordData);
+        toast({ title: 'Éxito', description: 'Registro agregado correctamente.' });
+        form.reset({
+            ...form.getValues(),
+            integranteId: '',
+            razonId: '',
+            monto: undefined,
+            descripcion: ''
+        });
+      }
+      onFinished?.();
     } catch (error) {
-      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo agregar el registro.' });
+      toast({ variant: 'destructive', title: 'Error', description: `No se pudo ${record?.id ? 'actualizar' : 'agregar'} el registro.` });
     } finally {
       setIsSubmitting(false);
     }
@@ -77,11 +106,12 @@ const RecordsForm = () => {
     razones.map(r => ({ value: r.id, label: r.descripcion })),
   [razones]);
 
+  const title = record?.id ? 'Editar Registro' : 'Añadir Nuevo Registro';
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Añadir Nuevo Registro</CardTitle>
+        <CardTitle>{title}</CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -95,7 +125,7 @@ const RecordsForm = () => {
                                 <CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button>
                             </FormControl>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
+                        <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onChange={field.onChange} initialFocus /></PopoverContent>
                         </Popover><FormMessage />
                     </FormItem>)} />
                 
@@ -105,7 +135,7 @@ const RecordsForm = () => {
                     <Autocomplete
                       options={integranteOptions}
                       value={field.value}
-                      onChange={(value) => form.setValue('integranteId', value)}
+                      onChange={(value) => form.setValue('integranteId', value, { shouldValidate: true })}
                       placeholder="Busca o selecciona un integrante"
                     />
                     <FormMessage />
@@ -117,7 +147,7 @@ const RecordsForm = () => {
                     <Autocomplete
                       options={razonOptions}
                       value={field.value}
-                      onChange={(value) => form.setValue('razonId', value)}
+                      onChange={(value) => form.setValue('razonId', value, { shouldValidate: true })}
                       placeholder="Busca o selecciona una razón"
                     />
                     <FormMessage />
@@ -125,6 +155,25 @@ const RecordsForm = () => {
 
                 <FormField control={form.control} name="monto" render={({ field }) => (
                     <FormItem><FormLabel>Monto</FormLabel><FormControl><Input type="number" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                
+                <FormField
+                  control={form.control}
+                  name="descripcion"
+                  render={({ field }) => (
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>Descripción (Opcional)</FormLabel>
+                        <Autocomplete
+                          options={uniqueDescriptionOptions}
+                          value={field.value || ''}
+                          onChange={(value) => field.onChange(value)}
+                          placeholder="Detalles del movimiento..."
+                          allowCustomValue={true}
+                        />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <FormField control={form.control} name="movimiento" render={({ field }) => (
                     <FormItem className="md:col-span-2"><FormLabel>Movimiento</FormLabel>
                         <div className="grid grid-cols-3 gap-2">
@@ -132,29 +181,62 @@ const RecordsForm = () => {
                             <Button type="button" key={mov} variant={field.value === mov ? 'default' : 'outline'} onClick={() => field.onChange(mov)}>{mov}</Button>
                         ))}</div><FormMessage />
                     </FormItem>)} />
-                <FormField control={form.control} name="descripcion" render={({ field }) => (
-                    <FormItem className="md:col-span-2">
-                      <FormLabel>Descripción</FormLabel>
-                      <Autocomplete
-                        options={uniqueDescriptionOptions}
-                        value={field.value || ''}
-                        onChange={(value) => form.setValue('descripcion', value)}
-                        placeholder="Detalles del movimiento... (Opcional)"
-                        allowCustomValue={true}
-                      />
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
             </div>
             <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Agregar Registro
+              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} {record?.id ? 'Guardar Cambios' : 'Agregar Registro'}
             </Button>
           </form>
         </Form>
       </CardContent>
     </Card>
   );
+}
+
+const EditRecordDialog = ({ record }: { record: FinancialRecord }) => {
+    const [open, setOpen] = useState(false);
+    return (
+        <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild>
+                <Button size="icon" variant="ghost"><Pencil className="h-4 w-4" /></Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[625px]">
+                <RecordsForm record={record} onFinished={() => setOpen(false)} />
+            </DialogContent>
+        </Dialog>
+    );
+};
+
+const DeleteRecordAlert = ({ recordId, recordDesc }: { recordId: string; recordDesc: string; }) => {
+    const { deleteFinancialRecord } = useAppContext();
+    const { toast } = useToast();
+
+    const handleDelete = async () => {
+        try {
+            await deleteFinancialRecord(recordId);
+            toast({ title: "Éxito", description: "Registro eliminado." });
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Error', description: 'No se pudo eliminar el registro.' });
+        }
+    };
+    return (
+        <AlertDialog>
+            <AlertDialogTrigger asChild>
+                <Button size="icon" variant="ghost" className="text-destructive"><Trash2 className="h-4 w-4"/></Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        Esta acción no se puede deshacer. Se eliminará permanentemente el registro: "{recordDesc}".
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDelete}>Sí, eliminar</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    );
 }
 
 const RecordCard = ({ record, getIntegranteName, getRazonDesc }: { record: FinancialRecord; getIntegranteName: (id: string) => string; getRazonDesc: (id: string) => string }) => {
@@ -168,10 +250,14 @@ const RecordCard = ({ record, getIntegranteName, getRazonDesc }: { record: Finan
         <Card className={cn("mb-3 overflow-hidden", movimientoColors[record.movimiento], 'border-l-4')}>
             <CardContent className="p-4 space-y-3">
                 <div className="flex justify-between items-start">
-                    <p className="font-semibold text-lg">{record.descripcion || <span className="italic text-muted-foreground">Sin descripción</span>}</p>
-                    <div className={cn('font-mono font-bold text-lg', record.monto >= 0 ? 'text-green-500' : 'text-red-500')}>
-                        {record.monto.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}
+                    <p className="font-semibold text-lg flex-1 pr-2">{record.descripcion || <span className="italic text-muted-foreground">Sin descripción</span>}</p>
+                     <div className="flex items-center">
+                        <EditRecordDialog record={record} />
+                        <DeleteRecordAlert recordId={record.id} recordDesc={record.descripcion || `Registro del ${record.fecha}`} />
                     </div>
+                </div>
+                 <div className={cn('font-mono font-bold text-lg', record.monto >= 0 ? 'text-green-500' : 'text-red-500')}>
+                    {record.monto.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}
                 </div>
                 <div className="text-sm text-muted-foreground space-y-2">
                     <div className="flex items-center gap-2"><Tag className="w-4 h-4" /> <span>{getRazonDesc(record.razonId)} ({record.movimiento})</span></div>
@@ -365,6 +451,7 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
                             <TableHead>Razón</TableHead>
                             <TableHead>Descripción</TableHead>
                             <TableHead className="text-right">Monto</TableHead>
+                            <TableHead className="text-right">Acciones</TableHead>
                         </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -379,10 +466,16 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
                                 <TableCell className={cn('text-right font-mono', record.monto >= 0 ? 'text-green-500' : 'text-red-500')}>
                                 {record.monto.toFixed(2)}
                                 </TableCell>
+                                <TableCell className="text-right">
+                                    <div className="flex justify-end items-center">
+                                        <EditRecordDialog record={record} />
+                                        <DeleteRecordAlert recordId={record.id} recordDesc={record.descripcion || `Registro del ${record.fecha}`} />
+                                    </div>
+                                </TableCell>
                             </TableRow>
                             ))
                         ) : (
-                            <TableRow><TableCell colSpan={6} className="text-center">No hay registros que mostrar.</TableCell></TableRow>
+                            <TableRow><TableCell colSpan={7} className="text-center">No hay registros que mostrar.</TableCell></TableRow>
                         )}
                         </TableBody>
                     </Table>
