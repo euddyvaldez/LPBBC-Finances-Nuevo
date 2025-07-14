@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useTheme } from '@/components/ThemeProvider';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetTrigger } from '@/components/ui/sheet';
 import { Menu, Moon, Sun } from 'lucide-react';
 import { DesktopSidebar } from './DesktopSidebar';
 
@@ -22,6 +23,12 @@ export function Header() {
                     </Button>
                 </SheetTrigger>
                 <SheetContent side="left" className="p-0 w-72 bg-card">
+                    <SheetHeader className="sr-only">
+                      <SheetTitle>Menú Principal</SheetTitle>
+                      <SheetDescription>
+                        Navegación principal de la aplicación de finanzas.
+                      </SheetDescription>
+                    </SheetHeader>
                     <DesktopSidebar isMobile={true}/>
                 </SheetContent>
             </Sheet>
