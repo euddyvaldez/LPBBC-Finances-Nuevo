@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/card';
 import {
   Command,
+  CommandDialog,
   CommandEmpty,
   CommandGroup,
   CommandInput,
@@ -44,7 +45,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -223,41 +223,35 @@ export default function QuickRecordPage() {
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Integrante</FormLabel>
-                    <Dialog open={integranteDialogOpen} onOpenChange={setIntegranteDialogOpen}>
-                      <DialogTrigger asChild>
-                        <FormControl>
-                          <Button variant="outline" className={cn("w-full justify-start", !field.value && "text-muted-foreground")}>
-                            {integrantes.find((i) => i.id === field.value)?.nombre ?? "Selecciona un integrante"}
-                          </Button>
-                        </FormControl>
-                      </DialogTrigger>
-                      <DialogContent className="p-0">
-                        <DialogHeader className='p-4 pb-0'>
-                          <DialogTitle>Selecciona un Integrante</DialogTitle>
-                        </DialogHeader>
-                        <Command>
-                          <CommandInput placeholder="Buscar integrante..." />
-                          <CommandList>
-                            <CommandEmpty>No se encontró el integrante.</CommandEmpty>
-                            <CommandGroup>
-                              {integrantes.map((integrante) => (
-                                <CommandItem
-                                  value={integrante.nombre}
-                                  key={integrante.id}
-                                  onSelect={() => {
-                                    form.setValue('integranteId', integrante.id);
-                                    setIntegranteDialogOpen(false);
-                                  }}
-                                >
-                                  <Check className={cn("mr-2 h-4 w-4", field.value === integrante.id ? "opacity-100" : "opacity-0")} />
-                                  {integrante.nombre}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </DialogContent>
-                    </Dialog>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className={cn("w-full justify-start", !field.value && "text-muted-foreground")}
+                      onClick={() => setIntegranteDialogOpen(true)}
+                    >
+                      {integrantes.find((i) => i.id === field.value)?.nombre ?? "Selecciona un integrante"}
+                    </Button>
+                    <CommandDialog open={integranteDialogOpen} onOpenChange={setIntegranteDialogOpen}>
+                        <CommandInput placeholder="Buscar integrante..." />
+                        <CommandList>
+                          <CommandEmpty>No se encontró el integrante.</CommandEmpty>
+                          <CommandGroup>
+                            {integrantes.map((integrante) => (
+                              <CommandItem
+                                value={integrante.nombre}
+                                key={integrante.id}
+                                onSelect={() => {
+                                  form.setValue('integranteId', integrante.id);
+                                  setIntegranteDialogOpen(false);
+                                }}
+                              >
+                                <Check className={cn("mr-2 h-4 w-4", field.value === integrante.id ? "opacity-100" : "opacity-0")} />
+                                {integrante.nombre}
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                    </CommandDialog>
                     <FormMessage />
                   </FormItem>
                 )}
