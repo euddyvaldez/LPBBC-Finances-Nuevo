@@ -53,10 +53,11 @@ const quickRecordSchema = z.object({
   movimiento: z.enum(['INGRESOS', 'GASTOS', 'INVERSION'], {
     required_error: 'El tipo de movimiento es requerido.',
   }),
+  descripcion: z.string().optional(),
 });
 
 export default function QuickRecordPage() {
-  const { razones, integrantes, addFinancialRecord, loading } = useAppContext();
+  const { razones, integrantes, addFinancialRecord, loading, financialRecords } = useAppContext();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -68,6 +69,7 @@ export default function QuickRecordPage() {
       movimiento: 'INGRESOS',
       razonId: '',
       integranteId: '',
+      descripcion: '',
     },
   });
 
@@ -86,11 +88,11 @@ export default function QuickRecordPage() {
   const onSubmit = async (values: z.infer<typeof quickRecordSchema>) => {
     setIsSubmitting(true);
     try {
+      const razonDesc = razones.find((r) => r.id === values.razonId)?.descripcion || '';
       await addFinancialRecord({
         ...values,
         fecha: format(values.fecha, 'yyyy-MM-dd'),
-        descripcion:
-          razones.find((r) => r.id === values.razonId)?.descripcion || '',
+        descripcion: values.descripcion || razonDesc,
       });
       toast({
         title: 'Éxito',
@@ -102,6 +104,7 @@ export default function QuickRecordPage() {
         integranteId: '',
         monto: 100,
         movimiento: 'INGRESOS',
+        descripcion: '',
       });
     } catch (error) {
       toast({
@@ -117,6 +120,11 @@ export default function QuickRecordPage() {
   const integranteOptions = useMemo(() => 
     integrantes.map(i => ({ value: i.id, label: i.nombre })), 
   [integrantes]);
+  
+  const uniqueDescriptionOptions = useMemo(() => {
+    const descriptions = new Set(financialRecords.map(r => r.descripcion).filter(Boolean));
+    return Array.from(descriptions).map(d => ({ value: d, label: d }));
+  }, [financialRecords]);
 
   return (
     <div className="space-y-6">
@@ -233,7 +241,7 @@ export default function QuickRecordPage() {
                 control={form.control}
                 name="movimiento"
                 render={({ field }) => (
-                  <FormItem className="sm:col-span-2">
+                  <FormItem>
                     <FormLabel>Movimiento</FormLabel>
                     <FormControl>
                         <div className='grid grid-cols-3 gap-2'>
@@ -249,6 +257,24 @@ export default function QuickRecordPage() {
                         ))}
                         </div>
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="descripcion"
+                render={({ field }) => (
+                  <FormItem className="sm:col-span-2">
+                    <FormLabel>Descripción (Opcional)</FormLabel>
+                      <Autocomplete
+                        options={uniqueDescriptionOptions}
+                        value={field.value || ''}
+                        onChange={field.onChange}
+                        placeholder="Detalles del movimiento..."
+                        allowCustomValue={true}
+                      />
                     <FormMessage />
                   </FormItem>
                 )}
