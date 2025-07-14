@@ -3,6 +3,9 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import type { FinancialRecord, Integrante, Razon } from '@/types';
 import * as api from '@/lib/data';
+import { checkAndSeedInitialData } from '@/lib/data';
+import { onSnapshot, collection } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface AppContextType {
   integrantes: Integrante[];
@@ -10,7 +13,6 @@ interface AppContextType {
   financialRecords: FinancialRecord[];
   loading: boolean;
   error: Error | null;
-  refetchData: () => void;
   addFinancialRecord: (record: Omit<FinancialRecord, 'id'>) => Promise<void>;
   updateFinancialRecord: (id: string, record: Partial<Omit<FinancialRecord, 'id'>>) => Promise<void>;
   deleteFinancialRecord: (id: string) => Promise<void>;
@@ -34,106 +36,43 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  const fetchData = useCallback(async () => {
+  useEffect(() => {
     setLoading(true);
-    setError(null);
-    try {
-      const [integrantesData, razonesData, recordsData] = await Promise.all([
-        api.getIntegrantes(),
-        api.getRazones(),
-        api.getFinancialRecords(),
-      ]);
-      setIntegrantes(integrantesData);
-      setRazones(razonesData);
-      setFinancialRecords(recordsData);
-    } catch (err) {
-      setError(err instanceof Error ? err : new Error('An unknown error occurred'));
-    } finally {
-      setLoading(false);
-    }
+    // Seed initial data if necessary. This can be run once.
+    checkAndSeedInitialData().catch(console.error);
+
+    const unsubscribers = [
+      onSnapshot(collection(db, 'integrantes'), (snapshot) => {
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Integrante));
+        setIntegrantes(data);
+      }, (err) => {
+        setError(err);
+        console.error("Error fetching integrantes:", err);
+      }),
+      onSnapshot(collection(db, 'razones'), (snapshot) => {
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Razon));
+        setRazones(data);
+      }, (err) => {
+        setError(err);
+        console.error("Error fetching razones:", err);
+      }),
+      onSnapshot(collection(db, 'financialRecords'), (snapshot) => {
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FinancialRecord));
+        setFinancialRecords(data);
+        setLoading(false); // Stop loading after the main data is fetched
+      }, (err) => {
+        setError(err);
+        setLoading(false);
+        console.error("Error fetching financial records:", err);
+      })
+    ];
+
+    // Unsubscribe from listeners when the component unmounts
+    return () => {
+      unsubscribers.forEach(unsub => unsub());
+    };
   }, []);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  const handleAddFinancialRecord = async (record: Omit<FinancialRecord, 'id'>) => {
-    const newRecord = await api.addFinancialRecord(record);
-    setFinancialRecords(prev => [...prev, newRecord]);
-  };
-  
-  const handleUpdateFinancialRecord = async (id: string, record: Partial<Omit<FinancialRecord, 'id'>>) => {
-    const updatedRecord = await api.updateFinancialRecord(id, record);
-    setFinancialRecords(prev => prev.map(r => r.id === id ? updatedRecord : r));
-  };
-
-  const handleDeleteFinancialRecord = async (id: string) => {
-    const originalRecords = financialRecords;
-    setFinancialRecords(prev => prev.filter(r => r.id !== id));
-    try {
-        await api.deleteFinancialRecord(id);
-    } catch(error) {
-        setFinancialRecords(originalRecords);
-        throw error;
-    }
-  };
-
-  const handleImportFinancialRecords = async (records: Omit<FinancialRecord, 'id'>[], mode: 'add' | 'replace') => {
-    await api.importFinancialRecords(records, mode);
-    await fetchData(); // Full refetch is appropriate after bulk import
-  };
-
-  const handleAddIntegrante = async (nombre: string) => {
-    const newIntegrante = await api.addIntegrante(nombre);
-    setIntegrantes(prev => [...prev, newIntegrante]);
-  };
-
-  const handleImportIntegrantes = async (integrantes: Omit<Integrante, 'id'>[], mode: 'add' | 'replace') => {
-    await api.importIntegrantes(integrantes, mode);
-    await fetchData(); // Full refetch is appropriate after bulk import
-  };
-
-  const handleUpdateIntegrante = async (id: string, nombre: string) => {
-    const updatedIntegrante = await api.updateIntegrante(id, nombre);
-    setIntegrantes(prev => prev.map(i => i.id === id ? updatedIntegrante : i));
-  };
-
-  const handleDeleteIntegrante = async (id: string) => {
-    const originalIntegrantes = integrantes;
-    setIntegrantes(prev => prev.filter(i => i.id !== id));
-    try {
-      await api.deleteIntegrante(id);
-    } catch (error) {
-      setIntegrantes(originalIntegrantes);
-      throw error;
-    }
-  };
-  
-  const handleAddRazon = async (descripcion: string) => {
-    const newRazon = await api.addRazon(descripcion);
-    setRazones(prev => [...prev, newRazon]);
-  };
-
-  const handleImportRazones = async (razones: Omit<Razon, 'id'>[], mode: 'add' | 'replace') => {
-    await api.importRazones(razones, mode);
-    await fetchData(); // Full refetch is appropriate after bulk import
-  };
-
-  const handleUpdateRazon = async (id: string, updates: Partial<Omit<Razon, 'id'>>) => {
-    const updatedRazon = await api.updateRazon(id, updates);
-    setRazones(prev => prev.map(r => r.id === id ? updatedRazon : r));
-  };
-
-  const handleDeleteRazon = async (id: string) => {
-    const originalRazones = razones;
-    setRazones(prev => prev.filter(r => r.id !== id));
-    try {
-        await api.deleteRazon(id);
-    } catch(error) {
-        setRazones(originalRazones);
-        throw error;
-    }
-  };
 
   const value = {
     integrantes,
@@ -141,19 +80,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     financialRecords,
     loading,
     error,
-    refetchData: fetchData,
-    addFinancialRecord: handleAddFinancialRecord,
-    updateFinancialRecord: handleUpdateFinancialRecord,
-    deleteFinancialRecord: handleDeleteFinancialRecord,
-    importFinancialRecords: handleImportFinancialRecords,
-    addIntegrante: handleAddIntegrante,
-    importIntegrantes: handleImportIntegrantes,
-    updateIntegrante: handleUpdateIntegrante,
-    deleteIntegrante: handleDeleteIntegrante,
-    addRazon: handleAddRazon,
-    importRazones: handleImportRazones,
-    updateRazon: handleUpdateRazon,
-    deleteRazon: handleDeleteRazon,
+    addFinancialRecord: api.addFinancialRecord,
+    updateFinancialRecord: api.updateFinancialRecord,
+    deleteFinancialRecord: api.deleteFinancialRecord,
+    importFinancialRecords: api.importFinancialRecords,
+    addIntegrante: api.addIntegrante,
+    importIntegrantes: api.importIntegrantes,
+    updateIntegrante: api.updateIntegrante,
+    deleteIntegrante: api.deleteIntegrante,
+    addRazon: api.addRazon,
+    importRazones: api.importRazones,
+    updateRazon: api.updateRazon,
+    deleteRazon: api.deleteRazon,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
