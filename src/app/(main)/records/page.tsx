@@ -10,7 +10,7 @@ import { useState, useMemo, useRef } from 'react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { Download, Loader2, Upload, Tag, User, Calendar as CalendarIcon, Search } from 'lucide-react';
+import { Download, Loader2, Upload, Tag, User, Calendar as CalendarIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -19,7 +19,6 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import type { FinancialRecord, Movimiento } from '@/types';
-import { Textarea } from '@/components/ui/textarea';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Autocomplete } from '@/components/Autocomplete';
 
@@ -29,7 +28,7 @@ const recordSchema = z.object({
   razonId: z.string().min(1, 'La razón es requerida.'),
   movimiento: z.enum(['INGRESOS', 'GASTOS', 'INVERSION'], { required_error: 'El movimiento es requerido.' }),
   monto: z.coerce.number().positive('El monto debe ser un número positivo.'),
-  descripcion: z.string(),
+  descripcion: z.string().optional(),
 });
 
 const RecordsForm = () => {
@@ -48,6 +47,7 @@ const RecordsForm = () => {
       await addFinancialRecord({
         ...values,
         fecha: format(values.fecha, 'yyyy-MM-dd'),
+        descripcion: values.descripcion || '',
       });
       toast({ title: 'Éxito', description: 'Registro agregado correctamente.' });
       form.reset({
@@ -64,9 +64,9 @@ const RecordsForm = () => {
     }
   };
   
-  const uniqueDescriptions = useMemo(() => {
-    const descriptions = new Set(financialRecords.map(r => r.descripcion));
-    return Array.from(descriptions);
+  const uniqueDescriptionOptions = useMemo(() => {
+    const descriptions = new Set(financialRecords.map(r => r.descripcion).filter(Boolean));
+    return Array.from(descriptions).map(d => ({ value: d, label: d }));
   }, [financialRecords]);
 
   const integranteOptions = useMemo(() => 
@@ -133,12 +133,19 @@ const RecordsForm = () => {
                         ))}</div><FormMessage />
                     </FormItem>)} />
                 <FormField control={form.control} name="descripcion" render={({ field }) => (
-                    <FormItem className="md:col-span-2"><FormLabel>Descripción</FormLabel>
-                    <FormControl><Textarea placeholder="Detalles del movimiento... (Opcional)" {...field} list="desc-sugerencias" /></FormControl>
-                    <datalist id="desc-sugerencias">
-                        {uniqueDescriptions.map(d => <option key={d} value={d} />)}
-                    </datalist>
-                    <FormMessage /></FormItem>)} />
+                    <FormItem className="md:col-span-2">
+                      <FormLabel>Descripción</FormLabel>
+                      <Autocomplete
+                        options={uniqueDescriptionOptions}
+                        value={field.value || ''}
+                        onChange={(value) => form.setValue('descripcion', value)}
+                        placeholder="Detalles del movimiento... (Opcional)"
+                        allowCustomValue={true}
+                      />
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
             </div>
             <Button type="submit" className="w-full" disabled={isSubmitting}>
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} Agregar Registro
@@ -419,5 +426,3 @@ export default function RecordsPage() {
         </div>
     );
 }
-
-    

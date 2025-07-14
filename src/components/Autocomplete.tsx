@@ -16,6 +16,7 @@ interface AutocompleteProps {
   onChange: (value: string) => void;
   placeholder?: string;
   className?: string;
+  allowCustomValue?: boolean;
 }
 
 export function Autocomplete({
@@ -24,19 +25,33 @@ export function Autocomplete({
   onChange,
   placeholder,
   className,
+  allowCustomValue = false,
 }: AutocompleteProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const selectedOption = options.find((option) => option.value === value);
+  const selectedOption = options.find(
+    (option) =>
+      (allowCustomValue && option.value === value) ||
+      (!allowCustomValue && option.value === value)
+  );
 
   useEffect(() => {
-    setInputValue(selectedOption?.label || '');
-  }, [value, selectedOption]);
+    if (allowCustomValue) {
+      setInputValue(value || '');
+    } else {
+      setInputValue(selectedOption?.label || '');
+    }
+  }, [value, selectedOption, allowCustomValue]);
+
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(e.target.value);
+    const newInputValue = e.target.value;
+    setInputValue(newInputValue);
+    if (allowCustomValue) {
+      onChange(newInputValue);
+    }
     if (!isOpen) {
       setIsOpen(true);
     }
@@ -44,15 +59,25 @@ export function Autocomplete({
 
   const handleSelectOption = (option: AutocompleteOption) => {
     onChange(option.value);
-    setInputValue(option.label);
+    setInputValue(allowCustomValue ? option.value : option.label);
     setIsOpen(false);
+  };
+  
+  const handleInputBlur = () => {
+    if (allowCustomValue) return;
+
+    if (!value || !options.some(o => o.value === value)) {
+        onChange('');
+        setInputValue('');
+    }
   };
 
   const handleClickOutside = useCallback((event: MouseEvent) => {
     if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
       setIsOpen(false);
+      handleInputBlur();
     }
-  }, []);
+  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     document.addEventListener('mousedown', handleClickOutside);
@@ -73,6 +98,7 @@ export function Autocomplete({
         value={inputValue}
         onChange={handleInputChange}
         onFocus={() => setIsOpen(true)}
+        onBlur={handleInputBlur}
         className="w-full"
       />
       {isOpen && (
@@ -86,8 +112,9 @@ export function Autocomplete({
                       type="button"
                       className={cn(
                         'w-full text-left px-2 py-1.5 text-sm rounded-md hover:bg-accent',
-                        { 'bg-accent': value === option.value }
+                        { 'bg-accent': value === option.value && !allowCustomValue }
                       )}
+                      onMouseDown={(e) => e.preventDefault()} // Prevent input blur on click
                       onClick={() => handleSelectOption(option)}
                     >
                       {option.label}
