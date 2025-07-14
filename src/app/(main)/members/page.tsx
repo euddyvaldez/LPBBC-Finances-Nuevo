@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useAppContext } from '@/contexts/AppProvider';
@@ -173,8 +174,22 @@ export default function MembersPage() {
         switch (sortOrder) {
           case 'alpha-asc': return a.nombre.localeCompare(b.nombre);
           case 'alpha-desc': return b.nombre.localeCompare(a.nombre);
-          case 'id-asc': return parseInt(a.id, 10) - parseInt(b.id, 10);
-          case 'id-desc': return parseInt(b.id, 10) - parseInt(a.id, 10);
+          case 'id-asc': {
+            const idA = parseInt(a.id, 10);
+            const idB = parseInt(b.id, 10);
+            if (!isNaN(idA) && !isNaN(idB)) {
+              return idA - idB;
+            }
+            return a.id.localeCompare(b.id);
+          }
+          case 'id-desc': {
+            const idA = parseInt(a.id, 10);
+            const idB = parseInt(b.id, 10);
+            if (!isNaN(idA) && !isNaN(idB)) {
+              return idB - idA;
+            }
+            return b.id.localeCompare(a.id);
+          }
           default: return 0;
         }
       });
