@@ -44,6 +44,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
@@ -66,7 +67,7 @@ export default function QuickRecordPage() {
   const { razones, integrantes, addFinancialRecord, loading } = useAppContext();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [integrantePopoverOpen, setIntegrantePopoverOpen] = useState(false);
+  const [integranteDialogOpen, setIntegranteDialogOpen] = useState(false);
 
   const form = useForm<z.infer<typeof quickRecordSchema>>({
     resolver: zodResolver(quickRecordSchema),
@@ -221,44 +222,42 @@ export default function QuickRecordPage() {
                 name="integranteId"
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
-                     <FormLabel>Integrante</FormLabel>
-                    <Popover modal={true} open={integrantePopoverOpen} onOpenChange={setIntegrantePopoverOpen}>
-                        <PopoverTrigger asChild>
-                            <FormControl>
-                                <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value && "text-muted-foreground")}>
-                                    {integrantes.find((i) => i.id === field.value)?.nombre ?? "Selecciona un integrante"}
-                                </Button>
-                            </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" >
-                            <Command>
-                                <CommandInput placeholder="Buscar integrante..." />
-                                <CommandList>
-                                <CommandEmpty>No se encontró el integrante.</CommandEmpty>
-                                <CommandGroup>
-                                    {integrantes.map((integrante) => (
-                                    <CommandItem
-                                        value={integrante.nombre}
-                                        key={integrante.id}
-                                        onSelect={() => {
-                                          form.setValue('integranteId', integrante.id);
-                                          setIntegrantePopoverOpen(false);
-                                        }}
-                                    >
-                                        <Check
-                                            className={cn(
-                                                "mr-2 h-4 w-4",
-                                                field.value === integrante.id ? "opacity-100" : "opacity-0"
-                                            )}
-                                        />
-                                        {integrante.nombre}
-                                    </CommandItem>
-                                    ))}
-                                </CommandGroup>
-                                </CommandList>
-                            </Command>
-                        </PopoverContent>
-                    </Popover>
+                    <FormLabel>Integrante</FormLabel>
+                    <Dialog open={integranteDialogOpen} onOpenChange={setIntegranteDialogOpen}>
+                      <DialogTrigger asChild>
+                        <FormControl>
+                          <Button variant="outline" className={cn("w-full justify-start", !field.value && "text-muted-foreground")}>
+                            {integrantes.find((i) => i.id === field.value)?.nombre ?? "Selecciona un integrante"}
+                          </Button>
+                        </FormControl>
+                      </DialogTrigger>
+                      <DialogContent className="p-0">
+                        <DialogHeader className='p-4 pb-0'>
+                          <DialogTitle>Selecciona un Integrante</DialogTitle>
+                        </DialogHeader>
+                        <Command>
+                          <CommandInput placeholder="Buscar integrante..." />
+                          <CommandList>
+                            <CommandEmpty>No se encontró el integrante.</CommandEmpty>
+                            <CommandGroup>
+                              {integrantes.map((integrante) => (
+                                <CommandItem
+                                  value={integrante.nombre}
+                                  key={integrante.id}
+                                  onSelect={() => {
+                                    form.setValue('integranteId', integrante.id);
+                                    setIntegranteDialogOpen(false);
+                                  }}
+                                >
+                                  <Check className={cn("mr-2 h-4 w-4", field.value === integrante.id ? "opacity-100" : "opacity-0")} />
+                                  {integrante.nombre}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </DialogContent>
+                    </Dialog>
                     <FormMessage />
                   </FormItem>
                 )}

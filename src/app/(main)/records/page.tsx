@@ -22,6 +22,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import type { FinancialRecord, Movimiento } from '@/types';
 import { Textarea } from '@/components/ui/textarea';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 const recordSchema = z.object({
   fecha: z.date({ required_error: 'La fecha es requerida.' }),
@@ -36,8 +37,8 @@ const RecordsForm = () => {
   const { razones, integrantes, addFinancialRecord, financialRecords } = useAppContext();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [integrantePopoverOpen, setIntegrantePopoverOpen] = useState(false);
-  const [razonPopoverOpen, setRazonPopoverOpen] = useState(false);
+  const [integranteDialogOpen, setIntegranteDialogOpen] = useState(false);
+  const [razonDialogOpen, setRazonDialogOpen] = useState(false);
 
   const form = useForm<z.infer<typeof recordSchema>>({
     resolver: zodResolver(recordSchema),
@@ -93,48 +94,71 @@ const RecordsForm = () => {
                     </FormItem>)} />
                 
                 <FormField control={form.control} name="integranteId" render={({ field }) => (
-                    <FormItem className="flex flex-col"><FormLabel>Integrante</FormLabel>
-                        <Popover modal={true} open={integrantePopoverOpen} onOpenChange={setIntegrantePopoverOpen}><PopoverTrigger asChild>
-                            <FormControl><Button variant="outline" role="combobox" className={cn('w-full justify-between', !field.value && 'text-muted-foreground')}>
-                                {integrantes.find((i) => i.id === field.value)?.nombre ?? "Selecciona un integrante"}
-                                </Button>
-                            </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" ><Command>
-                            <CommandInput placeholder="Buscar integrante..." />
-                            <CommandList><CommandEmpty>No se encontró.</CommandEmpty><CommandGroup>
-                                {integrantes.map((i) => (
-                                    <CommandItem value={i.nombre} key={i.id} onSelect={() => { form.setValue('integranteId', i.id); setIntegrantePopoverOpen(false); }}>
-                                    <Check className={cn("mr-2 h-4 w-4", field.value === i.id ? "opacity-100" : "opacity-0")} />
-                                    {i.nombre}
-                                    </CommandItem>
-                                ))}
-                            </CommandGroup></CommandList>
-                        </Command></PopoverContent>
-                        </Popover><FormMessage />
-                    </FormItem>)} />
+                  <FormItem className="flex flex-col">
+                    <FormLabel>Integrante</FormLabel>
+                    <Dialog open={integranteDialogOpen} onOpenChange={setIntegranteDialogOpen}>
+                      <DialogTrigger asChild>
+                        <FormControl>
+                          <Button variant="outline" className={cn("w-full justify-start", !field.value && "text-muted-foreground")}>
+                            {integrantes.find((i) => i.id === field.value)?.nombre ?? "Selecciona un integrante"}
+                          </Button>
+                        </FormControl>
+                      </DialogTrigger>
+                      <DialogContent className="p-0">
+                        <DialogHeader className='p-4 pb-0'>
+                          <DialogTitle>Selecciona un Integrante</DialogTitle>
+                        </DialogHeader>
+                        <Command>
+                          <CommandInput placeholder="Buscar integrante..." />
+                          <CommandList>
+                            <CommandEmpty>No se encontró.</CommandEmpty>
+                            <CommandGroup>
+                              {integrantes.map((i) => (
+                                <CommandItem value={i.nombre} key={i.id} onSelect={() => { form.setValue('integranteId', i.id); setIntegranteDialogOpen(false); }}>
+                                  <Check className={cn("mr-2 h-4 w-4", field.value === i.id ? "opacity-100" : "opacity-0")} />
+                                  {i.nombre}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </DialogContent>
+                    </Dialog>
+                    <FormMessage />
+                  </FormItem>)} />
 
                 <FormField control={form.control} name="razonId" render={({ field }) => (
-                     <FormItem className="flex flex-col"><FormLabel>Razón</FormLabel>
-                        <Popover modal={true} open={razonPopoverOpen} onOpenChange={setRazonPopoverOpen}><PopoverTrigger asChild>
-                            <FormControl><Button variant="outline" role="combobox" className={cn('w-full justify-between', !field.value && 'text-muted-foreground')}>
-                                {razones.find((r) => r.id === field.value)?.descripcion ?? "Selecciona una razón"}
-                                </Button>
-                            </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0" ><Command>
+                   <FormItem className="flex flex-col">
+                    <FormLabel>Razón</FormLabel>
+                    <Dialog open={razonDialogOpen} onOpenChange={setRazonDialogOpen}>
+                      <DialogTrigger asChild>
+                        <FormControl>
+                          <Button variant="outline" className={cn("w-full justify-start", !field.value && "text-muted-foreground")}>
+                            {razones.find((r) => r.id === field.value)?.descripcion ?? "Selecciona una razón"}
+                          </Button>
+                        </FormControl>
+                      </DialogTrigger>
+                      <DialogContent className="p-0">
+                        <DialogHeader className='p-4 pb-0'>
+                           <DialogTitle>Selecciona una Razón</DialogTitle>
+                        </DialogHeader>
+                        <Command>
                             <CommandInput placeholder="Buscar razón..." />
-                            <CommandList><CommandEmpty>No se encontró.</CommandEmpty><CommandGroup>
+                            <CommandList>
+                              <CommandEmpty>No se encontró.</CommandEmpty>
+                              <CommandGroup>
                                 {razones.map((r) => (
-                                    <CommandItem value={r.descripcion} key={r.id} onSelect={() => { form.setValue('razonId', r.id); setRazonPopoverOpen(false); }}>
-                                        <Check className={cn("mr-2 h-4 w-4", field.value === r.id ? "opacity-100" : "opacity-0")} />
-                                        {r.descripcion}
-                                    </CommandItem>
+                                  <CommandItem value={r.descripcion} key={r.id} onSelect={() => { form.setValue('razonId', r.id); setRazonDialogOpen(false); }}>
+                                      <Check className={cn("mr-2 h-4 w-4", field.value === r.id ? "opacity-100" : "opacity-0")} />
+                                      {r.descripcion}
+                                  </CommandItem>
                                 ))}
                             </CommandGroup></CommandList>
-                        </Command></PopoverContent>
-                        </Popover><FormMessage />
-                    </FormItem>)} />
+                        </Command>
+                      </DialogContent>
+                    </Dialog>
+                    <FormMessage />
+                  </FormItem>)} />
 
                 <FormField control={form.control} name="monto" render={({ field }) => (
                     <FormItem><FormLabel>Monto</FormLabel><FormControl><Input type="number" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
