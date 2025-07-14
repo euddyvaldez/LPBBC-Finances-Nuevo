@@ -29,7 +29,7 @@ const recordSchema = z.object({
   razonId: z.string().min(1, 'La razón es requerida.'),
   movimiento: z.enum(['INGRESOS', 'GASTOS', 'INVERSION'], { required_error: 'El movimiento es requerido.' }),
   monto: z.coerce.number().positive('El monto debe ser un número positivo.'),
-  descripcion: z.string().min(1, 'La descripción es requerida.'),
+  descripcion: z.string(),
 });
 
 const RecordsForm = () => {
@@ -105,7 +105,7 @@ const RecordsForm = () => {
                     <Autocomplete
                       options={integranteOptions}
                       value={field.value}
-                      onChange={field.onChange}
+                      onChange={(value) => form.setValue('integranteId', value)}
                       placeholder="Busca o selecciona un integrante"
                     />
                     <FormMessage />
@@ -117,7 +117,7 @@ const RecordsForm = () => {
                     <Autocomplete
                       options={razonOptions}
                       value={field.value}
-                      onChange={field.onChange}
+                      onChange={(value) => form.setValue('razonId', value)}
                       placeholder="Busca o selecciona una razón"
                     />
                     <FormMessage />
@@ -134,7 +134,7 @@ const RecordsForm = () => {
                     </FormItem>)} />
                 <FormField control={form.control} name="descripcion" render={({ field }) => (
                     <FormItem className="md:col-span-2"><FormLabel>Descripción</FormLabel>
-                    <FormControl><Textarea placeholder="Detalles del movimiento..." {...field} list="desc-sugerencias" /></FormControl>
+                    <FormControl><Textarea placeholder="Detalles del movimiento... (Opcional)" {...field} list="desc-sugerencias" /></FormControl>
                     <datalist id="desc-sugerencias">
                         {uniqueDescriptions.map(d => <option key={d} value={d} />)}
                     </datalist>
@@ -161,7 +161,7 @@ const RecordCard = ({ record, getIntegranteName, getRazonDesc }: { record: Finan
         <Card className={cn("mb-3 overflow-hidden", movimientoColors[record.movimiento], 'border-l-4')}>
             <CardContent className="p-4 space-y-3">
                 <div className="flex justify-between items-start">
-                    <p className="font-semibold text-lg">{record.descripcion}</p>
+                    <p className="font-semibold text-lg">{record.descripcion || <span className="italic text-muted-foreground">Sin descripción</span>}</p>
                     <div className={cn('font-mono font-bold text-lg', record.monto >= 0 ? 'text-green-500' : 'text-red-500')}>
                         {record.monto.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}
                     </div>
@@ -368,7 +368,7 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
                                 <TableCell>{getIntegranteName(record.integranteId)}</TableCell>
                                 <TableCell>{record.movimiento}</TableCell>
                                 <TableCell>{getRazonDesc(record.razonId)}</TableCell>
-                                <TableCell>{record.descripcion}</TableCell>
+                                <TableCell>{record.descripcion || '-'}</TableCell>
                                 <TableCell className={cn('text-right font-mono', record.monto >= 0 ? 'text-green-500' : 'text-red-500')}>
                                 {record.monto.toFixed(2)}
                                 </TableCell>
@@ -419,3 +419,5 @@ export default function RecordsPage() {
         </div>
     );
 }
+
+    
