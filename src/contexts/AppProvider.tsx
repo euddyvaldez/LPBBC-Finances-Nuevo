@@ -38,8 +38,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setLoading(true);
+    
     // Seed initial data if necessary. This can be run once.
-    checkAndSeedInitialData().catch(console.error);
+    const seedData = async () => {
+      try {
+        await checkAndSeedInitialData();
+      } catch (e) {
+        console.error("Failed to seed initial data. This might be due to missing Firebase config or network issues.", e);
+        setError(e as Error);
+      }
+    };
+    seedData();
 
     const unsubscribers = [
       onSnapshot(collection(db, 'integrantes'), (snapshot) => {
