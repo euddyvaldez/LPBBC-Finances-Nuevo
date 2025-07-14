@@ -222,7 +222,7 @@ export default function QuickRecordPage() {
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                      <FormLabel>Integrante</FormLabel>
-                    <Popover open={integrantePopoverOpen} onOpenChange={setIntegrantePopoverOpen}>
+                    <Popover modal={true} open={integrantePopoverOpen} onOpenChange={setIntegrantePopoverOpen}>
                         <PopoverTrigger asChild>
                             <FormControl>
                                 <Button variant="outline" role="combobox" className={cn("w-full justify-between", !field.value && "text-muted-foreground")}>
@@ -290,8 +290,8 @@ export default function QuickRecordPage() {
               />
               </div>
 
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Button type="submit" className="w-full" disabled={isSubmitting || loading}>
+                {(isSubmitting || loading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                 Agregar Rápido
               </Button>
             </form>

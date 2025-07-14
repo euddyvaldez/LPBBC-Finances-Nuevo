@@ -94,7 +94,7 @@ const RecordsForm = () => {
                 
                 <FormField control={form.control} name="integranteId" render={({ field }) => (
                     <FormItem className="flex flex-col"><FormLabel>Integrante</FormLabel>
-                        <Popover open={integrantePopoverOpen} onOpenChange={setIntegrantePopoverOpen}><PopoverTrigger asChild>
+                        <Popover modal={true} open={integrantePopoverOpen} onOpenChange={setIntegrantePopoverOpen}><PopoverTrigger asChild>
                             <FormControl><Button variant="outline" role="combobox" className={cn('w-full justify-between', !field.value && 'text-muted-foreground')}>
                                 {integrantes.find((i) => i.id === field.value)?.nombre ?? "Selecciona un integrante"}
                                 </Button>
@@ -116,7 +116,7 @@ const RecordsForm = () => {
 
                 <FormField control={form.control} name="razonId" render={({ field }) => (
                      <FormItem className="flex flex-col"><FormLabel>Razón</FormLabel>
-                        <Popover open={razonPopoverOpen} onOpenChange={setRazonPopoverOpen}><PopoverTrigger asChild>
+                        <Popover modal={true} open={razonPopoverOpen} onOpenChange={setRazonPopoverOpen}><PopoverTrigger asChild>
                             <FormControl><Button variant="outline" role="combobox" className={cn('w-full justify-between', !field.value && 'text-muted-foreground')}>
                                 {razones.find((r) => r.id === field.value)?.descripcion ?? "Selecciona una razón"}
                                 </Button>
