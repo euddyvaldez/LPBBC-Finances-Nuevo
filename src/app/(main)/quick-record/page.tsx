@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Calendar as CalendarIcon, Loader2, Check } from 'lucide-react';
+import { Calendar as CalendarIcon, Loader2 } from 'lucide-react';
 import {
   Form,
   FormControl,
@@ -21,15 +21,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Command,
-  CommandDialog,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useAppContext } from '@/contexts/AppProvider';
@@ -50,6 +41,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useMemo, useState } from 'react';
 import type { Movimiento } from '@/types';
+import { Autocomplete } from '@/components/Autocomplete';
 
 const quickRecordSchema = z.object({
   fecha: z.date({
@@ -67,7 +59,6 @@ export default function QuickRecordPage() {
   const { razones, integrantes, addFinancialRecord, loading } = useAppContext();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [integranteDialogOpen, setIntegranteDialogOpen] = useState(false);
 
   const form = useForm<z.infer<typeof quickRecordSchema>>({
     resolver: zodResolver(quickRecordSchema),
@@ -122,6 +113,10 @@ export default function QuickRecordPage() {
       setIsSubmitting(false);
     }
   };
+
+  const integranteOptions = useMemo(() => 
+    integrantes.map(i => ({ value: i.id, label: i.nombre })), 
+  [integrantes]);
 
   return (
     <div className="space-y-6">
@@ -223,35 +218,12 @@ export default function QuickRecordPage() {
                 render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Integrante</FormLabel>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className={cn("w-full justify-start", !field.value && "text-muted-foreground")}
-                      onClick={() => setIntegranteDialogOpen(true)}
-                    >
-                      {integrantes.find((i) => i.id === field.value)?.nombre ?? "Selecciona un integrante"}
-                    </Button>
-                    <CommandDialog open={integranteDialogOpen} onOpenChange={setIntegranteDialogOpen}>
-                        <CommandInput placeholder="Buscar integrante..." />
-                        <CommandList>
-                          <CommandEmpty>No se encontró el integrante.</CommandEmpty>
-                          <CommandGroup>
-                            {integrantes.map((integrante) => (
-                              <CommandItem
-                                value={integrante.nombre}
-                                key={integrante.id}
-                                onSelect={() => {
-                                  form.setValue('integranteId', integrante.id);
-                                  setIntegranteDialogOpen(false);
-                                }}
-                              >
-                                <Check className={cn("mr-2 h-4 w-4", field.value === integrante.id ? "opacity-100" : "opacity-0")} />
-                                {integrante.nombre}
-                              </CommandItem>
-                            ))}
-                          </CommandGroup>
-                        </CommandList>
-                    </CommandDialog>
+                     <Autocomplete
+                        options={integranteOptions}
+                        value={field.value}
+                        onChange={field.onChange}
+                        placeholder="Selecciona un integrante"
+                      />
                     <FormMessage />
                   </FormItem>
                 )}

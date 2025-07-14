@@ -10,7 +10,7 @@ import { useState, useMemo, useRef } from 'react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { Download, Loader2, Upload, Tag, User, Calendar as CalendarIcon, Search, Check } from 'lucide-react';
+import { Download, Loader2, Upload, Tag, User, Calendar as CalendarIcon, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -18,10 +18,10 @@ import { z } from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { Command, CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import type { FinancialRecord, Movimiento } from '@/types';
 import { Textarea } from '@/components/ui/textarea';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Autocomplete } from '@/components/Autocomplete';
 
 const recordSchema = z.object({
   fecha: z.date({ required_error: 'La fecha es requerida.' }),
@@ -36,8 +36,6 @@ const RecordsForm = () => {
   const { razones, integrantes, addFinancialRecord, financialRecords } = useAppContext();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [integranteDialogOpen, setIntegranteDialogOpen] = useState(false);
-  const [razonDialogOpen, setRazonDialogOpen] = useState(false);
 
   const form = useForm<z.infer<typeof recordSchema>>({
     resolver: zodResolver(recordSchema),
@@ -71,6 +69,15 @@ const RecordsForm = () => {
     return Array.from(descriptions);
   }, [financialRecords]);
 
+  const integranteOptions = useMemo(() => 
+    integrantes.map(i => ({ value: i.id, label: i.nombre })), 
+  [integrantes]);
+
+  const razonOptions = useMemo(() =>
+    razones.map(r => ({ value: r.id, label: r.descripcion })),
+  [razones]);
+
+
   return (
     <Card>
       <CardHeader>
@@ -95,55 +102,24 @@ const RecordsForm = () => {
                 <FormField control={form.control} name="integranteId" render={({ field }) => (
                   <FormItem className="flex flex-col">
                     <FormLabel>Integrante</FormLabel>
-                     <Button
-                      type="button"
-                      variant="outline"
-                      className={cn("w-full justify-start", !field.value && "text-muted-foreground")}
-                      onClick={() => setIntegranteDialogOpen(true)}
-                    >
-                      {integrantes.find((i) => i.id === field.value)?.nombre ?? "Selecciona un integrante"}
-                    </Button>
-                    <CommandDialog open={integranteDialogOpen} onOpenChange={setIntegranteDialogOpen}>
-                      <CommandInput placeholder="Buscar integrante..." />
-                      <CommandList>
-                        <CommandEmpty>No se encontró.</CommandEmpty>
-                        <CommandGroup>
-                          {integrantes.map((i) => (
-                            <CommandItem value={i.nombre} key={i.id} onSelect={() => { form.setValue('integranteId', i.id); setIntegranteDialogOpen(false); }}>
-                              <Check className={cn("mr-2 h-4 w-4", field.value === i.id ? "opacity-100" : "opacity-0")} />
-                              {i.nombre}
-                            </CommandItem>
-                          ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </CommandDialog>
+                    <Autocomplete
+                      options={integranteOptions}
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="Busca o selecciona un integrante"
+                    />
                     <FormMessage />
                   </FormItem>)} />
 
                 <FormField control={form.control} name="razonId" render={({ field }) => (
                    <FormItem className="flex flex-col">
                     <FormLabel>Razón</FormLabel>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className={cn("w-full justify-start", !field.value && "text-muted-foreground")}
-                      onClick={() => setRazonDialogOpen(true)}
-                    >
-                      {razones.find((r) => r.id === field.value)?.descripcion ?? "Selecciona una razón"}
-                    </Button>
-                    <CommandDialog open={razonDialogOpen} onOpenChange={setRazonDialogOpen}>
-                      <CommandInput placeholder="Buscar razón..." />
-                      <CommandList>
-                        <CommandEmpty>No se encontró.</CommandEmpty>
-                        <CommandGroup>
-                          {razones.map((r) => (
-                            <CommandItem value={r.descripcion} key={r.id} onSelect={() => { form.setValue('razonId', r.id); setRazonDialogOpen(false); }}>
-                                <Check className={cn("mr-2 h-4 w-4", field.value === r.id ? "opacity-100" : "opacity-0")} />
-                                {r.descripcion}
-                            </CommandItem>
-                          ))}
-                      </CommandGroup></CommandList>
-                    </CommandDialog>
+                    <Autocomplete
+                      options={razonOptions}
+                      value={field.value}
+                      onChange={field.onChange}
+                      placeholder="Busca o selecciona una razón"
+                    />
                     <FormMessage />
                   </FormItem>)} />
 
