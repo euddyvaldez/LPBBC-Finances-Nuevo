@@ -90,14 +90,16 @@ export const updateIntegrante = async (id: string, nombre: string): Promise<Inte
   if (!integrante) throw new Error('Integrante no encontrado');
   if (integrante.isProtected) throw new Error('No se puede modificar un integrante protegido.');
   integrante.nombre = nombre.toUpperCase();
-  return integrante;
+  return { ...integrante };
 };
 
 export const deleteIntegrante = async (id: string): Promise<void> => {
   await simulateDbDelay();
   const integrante = integrantes.find(i => i.id === id);
   if (integrante?.isProtected) throw new Error('No se puede eliminar un integrante protegido.');
-  integrantes = integrantes.filter(i => i.id !== id);
+  const index = integrantes.findIndex(i => i.id === id);
+  if (index === -1) throw new Error('Integrante no encontrado para eliminar');
+  integrantes.splice(index, 1);
 };
 
 // Razones
@@ -144,12 +146,14 @@ export const updateRazon = async (id: string, updates: Partial<Omit<Razon, 'id'>
     if (!razon) throw new Error('Razón no encontrada');
     if(updates.descripcion) updates.descripcion = updates.descripcion.toUpperCase();
     Object.assign(razon, updates);
-    return razon;
+    return { ...razon };
 };
 
 export const deleteRazon = async (id: string): Promise<void> => {
     await simulateDbDelay();
-    razones = razones.filter(r => r.id !== id);
+    const index = razones.findIndex(r => r.id === id);
+    if (index === -1) throw new Error('Razón no encontrada para eliminar');
+    razones.splice(index, 1);
 };
 
 
@@ -183,10 +187,11 @@ export const updateFinancialRecord = async (id: string, updates: Partial<Omit<Fi
 
   if (updates.monto !== undefined) {
     let monto = updates.monto;
-    if ((updatedRecord.movimiento === 'GASTOS' || updatedRecord.movimiento === 'INVERSION') && monto > 0) {
+    const finalMovimiento = updates.movimiento || financialRecords[recordIndex].movimiento;
+    if ((finalMovimiento === 'GASTOS' || finalMovimiento === 'INVERSION') && monto > 0) {
         monto = -monto;
     }
-    if (updatedRecord.movimiento === 'INGRESOS' && monto < 0) {
+    if (finalMovimiento === 'INGRESOS' && monto < 0) {
         monto = Math.abs(monto);
     }
     updatedRecord.monto = monto;
@@ -198,7 +203,9 @@ export const updateFinancialRecord = async (id: string, updates: Partial<Omit<Fi
 
 export const deleteFinancialRecord = async (id: string): Promise<void> => {
     await simulateDbDelay();
-    financialRecords = financialRecords.filter(r => r.id !== id);
+    const index = financialRecords.findIndex(r => r.id === id);
+    if (index === -1) throw new Error('Registro no encontrado para eliminar');
+    financialRecords.splice(index, 1);
 }
 
 export const importFinancialRecords = async (recordsToImport: Omit<FinancialRecord, 'id'>[], mode: 'add' | 'replace'): Promise<void> => {

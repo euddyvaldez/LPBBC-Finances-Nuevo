@@ -58,101 +58,79 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [fetchData]);
 
   const handleAddFinancialRecord = async (record: Omit<FinancialRecord, 'id'>) => {
-    await api.addFinancialRecord(record);
-    await fetchData();
+    const newRecord = await api.addFinancialRecord(record);
+    setFinancialRecords(prev => [...prev, newRecord]);
   };
   
   const handleUpdateFinancialRecord = async (id: string, record: Partial<Omit<FinancialRecord, 'id'>>) => {
-    await api.updateFinancialRecord(id, record);
-    await fetchData();
+    const updatedRecord = await api.updateFinancialRecord(id, record);
+    setFinancialRecords(prev => prev.map(r => r.id === id ? updatedRecord : r));
   };
 
   const handleDeleteFinancialRecord = async (id: string) => {
-    await api.deleteFinancialRecord(id);
-    await fetchData();
+    const originalRecords = financialRecords;
+    setFinancialRecords(prev => prev.filter(r => r.id !== id));
+    try {
+        await api.deleteFinancialRecord(id);
+    } catch(error) {
+        setFinancialRecords(originalRecords);
+        throw error;
+    }
   };
 
   const handleImportFinancialRecords = async (records: Omit<FinancialRecord, 'id'>[], mode: 'add' | 'replace') => {
     await api.importFinancialRecords(records, mode);
-    await fetchData();
+    await fetchData(); // Full refetch is appropriate after bulk import
   };
 
   const handleAddIntegrante = async (nombre: string) => {
-    await api.addIntegrante(nombre);
-    await fetchData();
+    const newIntegrante = await api.addIntegrante(nombre);
+    setIntegrantes(prev => [...prev, newIntegrante]);
   };
 
   const handleImportIntegrantes = async (integrantes: Omit<Integrante, 'id'>[], mode: 'add' | 'replace') => {
     await api.importIntegrantes(integrantes, mode);
-    await fetchData();
+    await fetchData(); // Full refetch is appropriate after bulk import
   };
 
   const handleUpdateIntegrante = async (id: string, nombre: string) => {
-    // Optimistic UI update
-    setIntegrantes(prev => prev.map(i => i.id === id ? { ...i, nombre: nombre.toUpperCase() } : i));
-    try {
-      await api.updateIntegrante(id, nombre);
-    } catch (error) {
-      // Revert on error and refetch to be safe
-      console.error("Failed to update integrante:", error);
-      await fetchData();
-      throw error;
-    }
-    // Optionally refetch in the background to ensure consistency
-    // await fetchData();
+    const updatedIntegrante = await api.updateIntegrante(id, nombre);
+    setIntegrantes(prev => prev.map(i => i.id === id ? updatedIntegrante : i));
   };
 
   const handleDeleteIntegrante = async (id: string) => {
-    // Optimistic UI update
     const originalIntegrantes = integrantes;
     setIntegrantes(prev => prev.filter(i => i.id !== id));
     try {
       await api.deleteIntegrante(id);
     } catch (error) {
-      // Revert on error
-      console.error("Failed to delete integrante:", error);
       setIntegrantes(originalIntegrantes);
-      await fetchData();
       throw error;
     }
   };
   
   const handleAddRazon = async (descripcion: string) => {
-    await api.addRazon(descripcion);
-    await fetchData();
+    const newRazon = await api.addRazon(descripcion);
+    setRazones(prev => [...prev, newRazon]);
   };
 
   const handleImportRazones = async (razones: Omit<Razon, 'id'>[], mode: 'add' | 'replace') => {
     await api.importRazones(razones, mode);
-    await fetchData();
+    await fetchData(); // Full refetch is appropriate after bulk import
   };
 
   const handleUpdateRazon = async (id: string, updates: Partial<Omit<Razon, 'id'>>) => {
-    // Optimistic UI update
-    setRazones(prev => prev.map(r => r.id === id ? { ...r, ...updates } : r));
-    try {
-      await api.updateRazon(id, updates);
-    } catch (error) {
-       // Revert on error and refetch to be safe
-      console.error("Failed to update razon:", error);
-      await fetchData();
-      throw error;
-    }
-     // Optionally refetch in the background to ensure consistency
-    // await fetchData();
+    const updatedRazon = await api.updateRazon(id, updates);
+    setRazones(prev => prev.map(r => r.id === id ? updatedRazon : r));
   };
 
   const handleDeleteRazon = async (id: string) => {
-    // Optimistic UI update
     const originalRazones = razones;
     setRazones(prev => prev.filter(r => r.id !== id));
     try {
         await api.deleteRazon(id);
     } catch(error) {
-        // Revert on error
-        console.error("Failed to delete razon:", error);
         setRazones(originalRazones);
-        await fetchData();
         throw error;
     }
   };
