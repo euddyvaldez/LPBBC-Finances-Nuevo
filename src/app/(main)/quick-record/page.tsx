@@ -236,12 +236,30 @@ export default function QuickRecordPage() {
                   </FormItem>
                 )}
               />
+              
+              <FormField
+                control={form.control}
+                name="descripcion"
+                render={({ field }) => (
+                  <FormItem className="sm:col-span-2">
+                    <FormLabel>Descripción (Opcional)</FormLabel>
+                      <Autocomplete
+                        options={uniqueDescriptionOptions}
+                        value={field.value || ''}
+                        onChange={field.onChange}
+                        placeholder="Detalles del movimiento..."
+                        allowCustomValue={true}
+                      />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}
                 name="movimiento"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="sm:col-span-2">
                     <FormLabel>Movimiento</FormLabel>
                     <FormControl>
                         <div className='grid grid-cols-3 gap-2'>
@@ -257,24 +275,6 @@ export default function QuickRecordPage() {
                         ))}
                         </div>
                     </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="descripcion"
-                render={({ field }) => (
-                  <FormItem className="sm:col-span-2">
-                    <FormLabel>Descripción (Opcional)</FormLabel>
-                      <Autocomplete
-                        options={uniqueDescriptionOptions}
-                        value={field.value || ''}
-                        onChange={field.onChange}
-                        placeholder="Detalles del movimiento..."
-                        allowCustomValue={true}
-                      />
                     <FormMessage />
                   </FormItem>
                 )}
