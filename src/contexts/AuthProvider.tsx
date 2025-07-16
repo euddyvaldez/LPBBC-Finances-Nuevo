@@ -28,15 +28,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
-      setLoading(false);
-      if (user && publicRoutes.includes(pathname)) {
-        router.push('/');
-      } else if (!user && !publicRoutes.includes(pathname)) {
-        router.push('/login');
+    const unsubscribe = onAuthStateChanged(auth, 
+      (user) => { // onNext observer
+        setUser(user);
+        setLoading(false);
+        if (user && publicRoutes.includes(pathname)) {
+          router.push('/');
+        } else if (!user && !publicRoutes.includes(pathname)) {
+          router.push('/login');
+        }
+      },
+      (error) => { // onError observer
+        console.error("Auth state error:", error);
+        handleAuthError(error);
+        setLoading(false);
       }
-    });
+    );
 
     return () => unsubscribe();
   }, [pathname, router]);
@@ -77,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const handleAuthError = (e: any) => {
     switch (e.code) {
       case 'auth/api-key-not-valid':
+      case 'auth/invalid-api-key':
         setError('Error de configuración: La clave de API de Firebase no es válida. Revisa tu archivo de configuración.');
         break;
       case 'auth/user-not-found':
