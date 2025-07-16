@@ -22,6 +22,7 @@ import type { FinancialRecord, Movimiento } from '@/types';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Autocomplete } from '@/components/Autocomplete';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useAuth } from '@/contexts/AuthProvider';
 
 const recordSchema = z.object({
   id: z.string().optional(),
@@ -35,7 +36,7 @@ const recordSchema = z.object({
 
 type RecordFormData = z.infer<typeof recordSchema>;
 
-const RecordsForm = ({ record, onFinished }: { record?: RecordFormData, onFinished?: () => void }) => {
+const RecordsForm = ({ record, onFinished }: { record?: FinancialRecord, onFinished?: () => void }) => {
   const { razones, integrantes, addFinancialRecord, updateFinancialRecord, financialRecords } = useAppContext();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -200,7 +201,7 @@ const EditRecordDialog = ({ record }: { record: FinancialRecord }) => {
                 <Button size="icon" variant="ghost"><Pencil className="h-4 w-4" /></Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[625px]">
-                <RecordsForm record={record as RecordFormData} onFinished={() => setOpen(false)} />
+                <RecordsForm record={record} onFinished={() => setOpen(false)} />
             </DialogContent>
         </Dialog>
     );
@@ -351,7 +352,7 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
               throw new Error(`Faltan las siguientes columnas en el CSV: ${missingHeaders.join(', ')}`);
             }
             
-            const recordsToImport: Omit<FinancialRecord, 'id'>[] = [];
+            const recordsToImport: Omit<FinancialRecord, 'id' | 'userId'>[] = [];
             const errors: string[] = [];
 
             const integranteMap = new Map(integrantes.map(i => [i.nombre.toLowerCase(), i.id]));
@@ -505,7 +506,9 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
 
 export default function RecordsPage() {
     const { financialRecords, loading } = useAppContext();
-    if (loading) {
+    const { user, loading: authLoading } = useAuth();
+
+    if (loading || authLoading || !user) {
         return (
           <div className="flex justify-center items-center h-[calc(100vh-10rem)]">
             <Loader2 className="h-16 w-16 animate-spin text-primary" />

@@ -19,32 +19,28 @@ const CitasData: Cita[] = [
 // --- API Functions ---
 
 // Integrantes
-export const getIntegrantes = async (): Promise<Integrante[]> => {
-  const snapshot = await getDocs(integrantesCol);
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Integrante));
-};
-
-export const addIntegrante = async (nombre: string, isProtected = false): Promise<void> => {
+export const addIntegrante = async (nombre: string, isProtected = false, userId: string): Promise<void> => {
+  if (!userId) throw new Error("User ID is required");
   const upperCaseNombre = nombre.toUpperCase();
-  const q = query(integrantesCol, where("nombre", "==", upperCaseNombre));
+  const q = query(integrantesCol, where("nombre", "==", upperCaseNombre), where("userId", "==", userId));
   const querySnapshot = await getDocs(q);
   if (querySnapshot.empty) {
-    await addDoc(integrantesCol, { nombre: upperCaseNombre, isProtected });
+    await addDoc(integrantesCol, { nombre: upperCaseNombre, isProtected, userId });
   }
 };
 
-export const importIntegrantes = async (integrantesToImport: Omit<Integrante, 'id'>[], mode: 'add' | 'replace'): Promise<void> => {
+export const importIntegrantes = async (integrantesToImport: Omit<Integrante, 'id' | 'userId'>[], mode: 'add' | 'replace', userId: string): Promise<void> => {
   const batch = writeBatch(db);
   
   if (mode === 'replace') {
-    const q = query(integrantesCol, where('isProtected', '!=', true));
+    const q = query(integrantesCol, where('isProtected', '!=', true), where("userId", "==", userId));
     const snapshot = await getDocs(q);
     snapshot.docs.forEach(doc => batch.delete(doc.ref));
   }
   
   integrantesToImport.forEach(integrante => {
     const newDocRef = doc(integrantesCol);
-    batch.set(newDocRef, { ...integrante, nombre: integrante.nombre.toUpperCase() });
+    batch.set(newDocRef, { ...integrante, nombre: integrante.nombre.toUpperCase(), userId });
   });
 
   await batch.commit();
@@ -70,37 +66,34 @@ export const deleteIntegrante = async (id: string): Promise<void> => {
 
 
 // Razones
-export const getRazones = async (): Promise<Razon[]> => {
-  const snapshot = await getDocs(razonesCol);
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Razon));
-};
-
-export const addRazon = async (descripcion: string, isQuickReason = false): Promise<void> => {
+export const addRazon = async (descripcion: string, isQuickReason = false, userId: string): Promise<void> => {
+    if (!userId) throw new Error("User ID is required");
     const upperCaseDesc = descripcion.toUpperCase();
-    const q = query(razonesCol, where("descripcion", "==", upperCaseDesc));
+    const q = query(razonesCol, where("descripcion", "==", upperCaseDesc), where("userId", "==", userId));
     const querySnapshot = await getDocs(q);
     if (querySnapshot.empty) {
-        await addDoc(razonesCol, { descripcion: upperCaseDesc, isQuickReason });
+        await addDoc(razonesCol, { descripcion: upperCaseDesc, isQuickReason, userId });
     }
 };
 
-export const importRazones = async (razonesToImport: Omit<Razon, 'id'>[], mode: 'add' | 'replace'): Promise<void> => {
+export const importRazones = async (razonesToImport: Omit<Razon, 'id' | 'userId'>[], mode: 'add' | 'replace', userId: string): Promise<void> => {
     const batch = writeBatch(db);
     
     if (mode === 'replace') {
-        const snapshot = await getDocs(razonesCol);
+        const q = query(razonesCol, where("userId", "==", userId));
+        const snapshot = await getDocs(q);
         snapshot.docs.forEach(doc => batch.delete(doc.ref));
     }
 
     razonesToImport.forEach(razon => {
         const newDocRef = doc(razonesCol);
-        batch.set(newDocRef, { ...razon, descripcion: razon.descripcion.toUpperCase() });
+        batch.set(newDocRef, { ...razon, descripcion: razon.descripcion.toUpperCase(), userId });
     });
 
     await batch.commit();
 };
 
-export const updateRazon = async (id: string, updates: Partial<Omit<Razon, 'id'>>): Promise<void> => {
+export const updateRazon = async (id: string, updates: Partial<Omit<Razon, 'id' | 'userId'>>): Promise<void> => {
     const docRef = doc(db, 'razones', id);
     if(updates.descripcion) {
       updates.descripcion = updates.descripcion.toUpperCase();
@@ -114,12 +107,8 @@ export const deleteRazon = async (id: string): Promise<void> => {
 
 
 // Financial Records
-export const getFinancialRecords = async (): Promise<FinancialRecord[]> => {
-  const snapshot = await getDocs(financialRecordsCol);
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as FinancialRecord));
-};
-
-export const addFinancialRecord = async (record: Omit<FinancialRecord, 'id'>): Promise<void> => {
+export const addFinancialRecord = async (record: Omit<FinancialRecord, 'id' | 'userId'>, userId: string): Promise<void> => {
+  if (!userId) throw new Error("User ID is required");
   let monto = record.monto;
   if ((record.movimiento === 'GASTOS' || record.movimiento === 'INVERSION') && monto > 0) {
       monto = -monto;
@@ -128,11 +117,11 @@ export const addFinancialRecord = async (record: Omit<FinancialRecord, 'id'>): P
       monto = Math.abs(monto);
   }
   
-  const newRecordData = { ...record, monto };
+  const newRecordData = { ...record, monto, userId };
   await addDoc(financialRecordsCol, newRecordData);
 };
 
-export const updateFinancialRecord = async (id: string, updates: Partial<Omit<FinancialRecord, 'id'>>): Promise<void> => {
+export const updateFinancialRecord = async (id: string, updates: Partial<Omit<FinancialRecord, 'id' | 'userId'>>): Promise<void> => {
   const docRef = doc(db, 'financialRecords', id);
   
   if (updates.monto !== undefined) {
@@ -155,11 +144,12 @@ export const deleteFinancialRecord = async (id: string): Promise<void> => {
     await deleteDoc(doc(db, 'financialRecords', id));
 };
 
-export const importFinancialRecords = async (recordsToImport: Omit<FinancialRecord, 'id'>[], mode: 'add' | 'replace'): Promise<void> => {
+export const importFinancialRecords = async (recordsToImport: Omit<FinancialRecord, 'id' | 'userId'>[], mode: 'add' | 'replace', userId: string): Promise<void> => {
     const batch = writeBatch(db);
 
     if (mode === 'replace') {
-        const snapshot = await getDocs(financialRecordsCol);
+        const q = query(financialRecordsCol, where("userId", "==", userId));
+        const snapshot = await getDocs(q);
         snapshot.docs.forEach(doc => batch.delete(doc.ref));
     }
 
@@ -172,7 +162,7 @@ export const importFinancialRecords = async (recordsToImport: Omit<FinancialReco
         if (r.movimiento === 'INGRESOS' && monto < 0) {
             monto = Math.abs(monto);
         }
-        batch.set(newDocRef, { ...r, monto });
+        batch.set(newDocRef, { ...r, monto, userId });
     });
 
     await batch.commit();

@@ -144,7 +144,7 @@ export default function ReasonsPage() {
           throw new Error('La columna "descripcion" no fue encontrada en el CSV.');
         }
 
-        const newRazones: Omit<Razon, 'id'>[] = [];
+        const newRazones: Omit<Razon, 'id' | 'userId'>[] = [];
         const existingDescriptions = new Set(razones.map(r => r.descripcion.toLowerCase()));
 
         for (let i = 1; i < lines.length; i++) {

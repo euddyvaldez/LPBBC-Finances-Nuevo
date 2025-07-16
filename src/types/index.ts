@@ -2,18 +2,21 @@ export type Movimiento = 'INGRESOS' | 'GASTOS' | 'INVERSION';
 
 export interface Razon {
   id: string;
+  userId: string;
   descripcion: string;
   isQuickReason: boolean;
 }
 
 export interface Integrante {
   id: string;
+  userId: string;
   nombre: string;
   isProtected?: boolean;
 }
 
 export interface FinancialRecord {
   id: string;
+  userId: string;
   fecha: string; // 'YYYY-MM-DD'
   integranteId: string;
   razonId: string;

@@ -4,6 +4,7 @@ import './globals.css';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import { AppProvider } from '@/contexts/AppProvider';
 import { Toaster } from '@/components/ui/toaster';
+import { AuthProvider } from '@/contexts/AuthProvider';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -21,10 +22,12 @@ export default function RootLayout({
     <html lang="es" suppressHydrationWarning>
       <body className={`${inter.variable} font-body antialiased`}>
         <ThemeProvider>
-          <AppProvider>
-            {children}
-            <Toaster />
-          </AppProvider>
+          <AuthProvider>
+            <AppProvider>
+              {children}
+              <Toaster />
+            </AppProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

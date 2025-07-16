@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import type { Integrante } from '@/types';
 
 export default function MembersPage() {
-  const { integrantes, addIntegrante, updateIntegrante, deleteIntegrante, financialRecords, loading, importIntegrantes } from useAppContext();
+  const { integrantes, addIntegrante, updateIntegrante, deleteIntegrante, financialRecords, loading, importIntegrantes } = useAppContext();
   const { toast } = useToast();
 
   const [newIntegranteName, setNewIntegranteName] = useState('');
@@ -133,7 +133,7 @@ export default function MembersPage() {
           throw new Error('La columna "nombre" no fue encontrada en el CSV.');
         }
 
-        const newIntegrantes: Omit<Integrante, 'id'>[] = [];
+        const newIntegrantes: Omit<Integrante, 'id' | 'userId'>[] = [];
         const existingNames = new Set(integrantes.map(i => i.nombre.toLowerCase()));
 
         for (let i = 1; i < lines.length; i++) {
@@ -243,7 +243,7 @@ export default function MembersPage() {
                 {editingId === integrante.id ? (
                   <Input value={editingName} onChange={(e) => setEditingName(e.target.value)} className="flex-1 mr-2"/>
                 ) : (
-                  <span className="font-medium">{integrante.id} - {integrante.nombre}</span>
+                  <span className="font-medium">{integrante.nombre}</span>
                 )}
                 <div className="flex items-center gap-2">
                   {editingId === integrante.id ? (
