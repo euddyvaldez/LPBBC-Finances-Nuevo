@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useCa
 import type { FinancialRecord, Integrante, Razon } from '@/types';
 import * as api from '@/lib/data';
 import { onSnapshot, collection, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, isFirebaseConfigured } from '@/lib/firebase';
 import { useAuth } from './AuthProvider';
 
 interface AppContextType {
@@ -38,8 +38,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
-    if (!user) {
-      // Si no hay usuario, vaciamos los datos y paramos de cargar.
+    if (!user || !isFirebaseConfigured) {
+      // If no user or firebase is not configured, clear data and stop loading.
       setIntegrantes([]);
       setRazones([]);
       setFinancialRecords([]);
@@ -50,12 +50,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setLoading(true);
 
     const createQuery = (collectionName: string) => query(collection(db, collectionName), where("userId", "==", user.uid));
+    
+    // Seed protected data for the user upon login if they don't exist.
+    // This is "fire and forget" and will only create them if they don't exist.
+    api.addIntegrante("INVITADO", true, user.uid);
+    api.addRazon("MENSUALIDAD", true, user.uid);
+    api.addRazon("SEMANAL", true, user.uid);
+
 
     const unsubscribers = [
       onSnapshot(createQuery('integrantes'), (snapshot) => {
         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Integrante));
         setIntegrantes(data);
-        api.addIntegrante("INVITADO", true, user.uid); // Seed protected data for user
       }, (err) => {
         setError(err);
         console.error("Error fetching integrantes:", err);
@@ -63,8 +69,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       onSnapshot(createQuery('razones'), (snapshot) => {
         const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Razon));
         setRazones(data);
-        api.addRazon("MENSUALIDAD", true, user.uid); // Seed protected data for user
-        api.addRazon("SEMANAL", true, user.uid);
       }, (err) => {
         setError(err);
         console.error("Error fetching razones:", err);
