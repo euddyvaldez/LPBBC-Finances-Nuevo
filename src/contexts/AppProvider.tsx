@@ -3,7 +3,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import type { FinancialRecord, Integrante, Razon } from '@/types';
 import * as api from '@/lib/data';
-import { checkAndSeedInitialData } from '@/lib/data';
 import { onSnapshot, collection } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
@@ -17,11 +16,11 @@ interface AppContextType {
   updateFinancialRecord: (id: string, record: Partial<Omit<FinancialRecord, 'id'>>) => Promise<void>;
   deleteFinancialRecord: (id: string) => Promise<void>;
   importFinancialRecords: (records: Omit<FinancialRecord, 'id'>[], mode: 'add' | 'replace') => Promise<void>;
-  addIntegrante: (nombre: string) => Promise<void>;
+  addIntegrante: (nombre: string, isProtected?: boolean) => Promise<void>;
   importIntegrantes: (integrantes: Omit<Integrante, 'id'>[], mode: 'add' | 'replace') => Promise<void>;
   updateIntegrante: (id: string, nombre: string) => Promise<void>;
   deleteIntegrante: (id: string) => Promise<void>;
-  addRazon: (descripcion: string) => Promise<void>;
+  addRazon: (descripcion: string, isQuickReason?: boolean) => Promise<void>;
   importRazones: (razones: Omit<Razon, 'id'>[], mode: 'add' | 'replace') => Promise<void>;
   updateRazon: (id: string, updates: Partial<Omit<Razon, 'id'>>) => Promise<void>;
   deleteRazon: (id: string) => Promise<void>;
@@ -38,17 +37,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setLoading(true);
-    
-    // Seed initial data if necessary. This can be run once.
-    const seedData = async () => {
-      try {
-        await checkAndSeedInitialData();
-      } catch (e) {
-        console.error("Failed to seed initial data. This might be due to missing Firebase config or network issues.", e);
-        setError(e as Error);
-      }
-    };
-    seedData();
 
     const unsubscribers = [
       onSnapshot(collection(db, 'integrantes'), (snapshot) => {

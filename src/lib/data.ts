@@ -16,45 +16,6 @@ const CitasData: Cita[] = [
     { texto: "El dinero no es más que una herramienta. Te llevará a donde desees, pero no te reemplazará como conductor.", autor: "Ayn Rand" }
 ];
 
-const initialRazones = [
-  { id: 'razon-mensualidad', descripcion: 'MENSUALIDAD', isQuickReason: true },
-  { id: 'razon-semanal', descripcion: 'SEMANAL', isQuickReason: true },
-  { id: 'razon-comida', descripcion: 'COMIDA', isQuickReason: true },
-];
-
-const initialIntegrantes = [
-  { id: 'int-forasteros', nombre: 'LOS FORASTEROS', isProtected: true },
-  { id: 'int-invitados', nombre: 'INVITADOS', isProtected: true },
-];
-
-
-export const checkAndSeedInitialData = async () => {
-    const batch = writeBatch(db);
-    let writes = 0;
-
-    for (const razon of initialRazones) {
-        const docRef = doc(db, 'razones', razon.id);
-        const docSnap = await getDoc(docRef);
-        if (!docSnap.exists()) {
-            batch.set(docRef, { descripcion: razon.descripcion, isQuickReason: razon.isQuickReason });
-            writes++;
-        }
-    }
-    for (const integrante of initialIntegrantes) {
-        const docRef = doc(db, 'integrantes', integrante.id);
-        const docSnap = await getDoc(docRef);
-        if (!docSnap.exists()) {
-            batch.set(docRef, { nombre: integrante.nombre, isProtected: integrante.isProtected });
-            writes++;
-        }
-    }
-
-    if (writes > 0) {
-        await batch.commit();
-    }
-};
-
-
 // --- API Functions ---
 
 // Integrantes
@@ -63,8 +24,13 @@ export const getIntegrantes = async (): Promise<Integrante[]> => {
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Integrante));
 };
 
-export const addIntegrante = async (nombre: string): Promise<void> => {
-  await addDoc(integrantesCol, { nombre: nombre.toUpperCase(), isProtected: false });
+export const addIntegrante = async (nombre: string, isProtected = false): Promise<void> => {
+  const upperCaseNombre = nombre.toUpperCase();
+  const q = query(integrantesCol, where("nombre", "==", upperCaseNombre));
+  const querySnapshot = await getDocs(q);
+  if (querySnapshot.empty) {
+    await addDoc(integrantesCol, { nombre: upperCaseNombre, isProtected });
+  }
 };
 
 export const importIntegrantes = async (integrantesToImport: Omit<Integrante, 'id'>[], mode: 'add' | 'replace'): Promise<void> => {
@@ -109,9 +75,13 @@ export const getRazones = async (): Promise<Razon[]> => {
   return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Razon));
 };
 
-export const addRazon = async (descripcion: string): Promise<void> => {
-    const newRazon = { descripcion: descripcion.toUpperCase(), isQuickReason: false };
-    await addDoc(razonesCol, newRazon);
+export const addRazon = async (descripcion: string, isQuickReason = false): Promise<void> => {
+    const upperCaseDesc = descripcion.toUpperCase();
+    const q = query(razonesCol, where("descripcion", "==", upperCaseDesc));
+    const querySnapshot = await getDocs(q);
+    if (querySnapshot.empty) {
+        await addDoc(razonesCol, { descripcion: upperCaseDesc, isQuickReason });
+    }
 };
 
 export const importRazones = async (razonesToImport: Omit<Razon, 'id'>[], mode: 'add' | 'replace'): Promise<void> => {
