@@ -26,4 +26,8 @@ if (!getApps().length) {
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-export { db, auth };
+// Check if the firebase config is still using placeholder values
+const isFirebaseConfigured = firebaseConfig.apiKey !== "REPLACE_WITH_YOUR_API_KEY";
+
+
+export { db, auth, isFirebaseConfigured };
