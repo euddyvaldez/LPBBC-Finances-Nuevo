@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
@@ -75,6 +76,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const handleAuthError = (e: any) => {
     switch (e.code) {
+      case 'auth/api-key-not-valid':
+        setError('Error de configuración: La clave de API de Firebase no es válida. Revisa tu archivo de configuración.');
+        break;
       case 'auth/user-not-found':
         setError('No se encontró un usuario con ese email.');
         break;
