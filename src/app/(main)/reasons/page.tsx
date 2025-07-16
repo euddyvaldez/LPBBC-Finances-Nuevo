@@ -1,3 +1,4 @@
+
 'use client';
 import { useAppContext } from '@/contexts/AppProvider';
 import { Button } from '@/components/ui/button';
@@ -96,7 +97,7 @@ export default function ReasonsPage() {
 
   const exportToCSV = () => {
     const headers = ['descripcion', 'isQuickReason'];
-    const rows = razones.map(r => [
+    const rows = filteredAndSortedRazones.map(r => [
       `"${r.descripcion.replace(/"/g, '""')}"`,
       r.isQuickReason
     ].join(','));
@@ -184,8 +185,8 @@ export default function ReasonsPage() {
         switch (sortOrder) {
           case 'alpha-asc': return a.descripcion.localeCompare(b.descripcion);
           case 'alpha-desc': return b.descripcion.localeCompare(a.descripcion);
-          case 'id-asc': return parseInt(a.id, 10) - parseInt(b.id, 10);
-          case 'id-desc': return parseInt(b.id, 10) - parseInt(a.id, 10);
+          case 'id-asc': return a.id.localeCompare(b.id);
+          case 'id-desc': return b.id.localeCompare(a.id);
           default: return 0;
         }
       });

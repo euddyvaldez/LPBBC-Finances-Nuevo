@@ -125,7 +125,7 @@ const RecordsForm = ({ record, onFinished }: { record?: RecordFormData, onFinish
                                 <CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button>
                             </FormControl>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onChange={field.onChange} initialFocus /></PopoverContent>
+                        <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
                         </Popover><FormMessage />
                     </FormItem>)} />
                 
@@ -200,7 +200,7 @@ const EditRecordDialog = ({ record }: { record: FinancialRecord }) => {
                 <Button size="icon" variant="ghost"><Pencil className="h-4 w-4" /></Button>
             </DialogTrigger>
             <DialogContent className="sm:max-w-[625px]">
-                <RecordsForm record={record} onFinished={() => setOpen(false)} />
+                <RecordsForm record={record as RecordFormData} onFinished={() => setOpen(false)} />
             </DialogContent>
         </Dialog>
     );

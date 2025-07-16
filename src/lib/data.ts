@@ -168,6 +168,7 @@ export const updateFinancialRecord = async (id: string, updates: Partial<Omit<Fi
   if (updates.monto !== undefined) {
     let monto = updates.monto;
     const finalMovimiento = updates.movimiento || (await getDoc(docRef)).data()?.movimiento;
+    
     if ((finalMovimiento === 'GASTOS' || finalMovimiento === 'INVERSION') && monto > 0) {
         monto = -monto;
     }

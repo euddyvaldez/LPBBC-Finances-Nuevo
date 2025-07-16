@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import type { Integrante } from '@/types';
 
 export default function MembersPage() {
-  const { integrantes, addIntegrante, updateIntegrante, deleteIntegrante, financialRecords, loading, importIntegrantes } = useAppContext();
+  const { integrantes, addIntegrante, updateIntegrante, deleteIntegrante, financialRecords, loading, importIntegrantes } from useAppContext();
   const { toast } = useToast();
 
   const [newIntegranteName, setNewIntegranteName] = useState('');
@@ -87,7 +87,7 @@ export default function MembersPage() {
 
   const exportToCSV = () => {
     const headers = ['nombre', 'isProtected'];
-    const rows = integrantes.map(i => [
+    const rows = filteredAndSortedIntegrantes.map(i => [
       `"${i.nombre.replace(/"/g, '""')}"`,
       !!i.isProtected
     ].join(','));
@@ -174,22 +174,8 @@ export default function MembersPage() {
         switch (sortOrder) {
           case 'alpha-asc': return a.nombre.localeCompare(b.nombre);
           case 'alpha-desc': return b.nombre.localeCompare(a.nombre);
-          case 'id-asc': {
-            const idA = parseInt(a.id, 10);
-            const idB = parseInt(b.id, 10);
-            if (!isNaN(idA) && !isNaN(idB)) {
-              return idA - idB;
-            }
-            return a.id.localeCompare(b.id);
-          }
-          case 'id-desc': {
-            const idA = parseInt(a.id, 10);
-            const idB = parseInt(b.id, 10);
-            if (!isNaN(idA) && !isNaN(idB)) {
-              return idB - idA;
-            }
-            return b.id.localeCompare(a.id);
-          }
+          case 'id-asc': return a.id.localeCompare(b.id);
+          case 'id-desc': return b.id.localeCompare(a.id);
           default: return 0;
         }
       });
