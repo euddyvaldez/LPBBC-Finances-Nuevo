@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/select';
 import { DatePicker } from '@/components/DatePicker';
 import { useAppContext } from '@/contexts/AppProvider';
-import { subMonths, startOfMonth, endOfMonth, startOfYear, endOfYear, format, parse, isValid } from 'date-fns';
+import { subMonths, startOfMonth, endOfMonth, startOfYear, endOfYear, format, parse, isValid, differenceInMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { FinancialChart } from '@/components/FinancialChart';
 import type { FinancialRecord } from '@/types';
@@ -36,10 +36,11 @@ export default function FinancialPanelPage() {
         const date = r.fecha ? parseDate(r.fecha) : null;
         return date && isValid(date) ? date.getFullYear() : null;
     }).filter(y => y !== null) as Set<number>);
-    return Array.from(years).sort((a, b) => b - a);
+    const sortedYears = Array.from(years).sort((a, b) => b - a);
+    return sortedYears.length > 0 ? sortedYears : [new Date().getFullYear()];
   }, [financialRecords]);
 
-  const [selectedYear, setSelectedYear] = useState<string>(String(availableYears[0] || new Date().getFullYear()));
+  const [selectedYear, setSelectedYear] = useState<string>(String(availableYears[0]));
   const [selectedMonth, setSelectedMonth] = useState<string>(String(new Date().getMonth()));
   
   const filteredRecords = useMemo(() => {
@@ -49,7 +50,7 @@ export default function FinancialPanelPage() {
       if (viewType === 'yearly') {
         return recordsToFilter;
       }
-      const year = parseInt(selectedYear);
+      const year = parseInt(selectedYear, 10);
       if (viewType === 'monthly') {
         const startDate = startOfYear(new Date(year, 0, 1));
         const endDate = endOfYear(new Date(year, 0, 1));
@@ -58,7 +59,7 @@ export default function FinancialPanelPage() {
           return recordDate >= startDate && recordDate <= endDate;
         });
       } else if (viewType === 'daily') {
-        const month = parseInt(selectedMonth);
+        const month = parseInt(selectedMonth, 10);
         const startDate = startOfMonth(new Date(year, month, 1));
         const endDate = endOfMonth(new Date(year, month, 1));
         return recordsToFilter.filter(r => {
@@ -68,12 +69,9 @@ export default function FinancialPanelPage() {
       }
     } else { // custom range
       if (!customStartDate || !customEndDate) return [];
-      const rangeStart = customStartDate ? startOfMonth(customStartDate) : null;
-      const rangeEnd = customEndDate ? endOfMonth(customEndDate) : null;
-      if(!rangeStart || !rangeEnd) return [];
       return recordsToFilter.filter(r => {
         const recordDate = parseDate(r.fecha);
-        return recordDate >= rangeStart && recordDate <= rangeEnd;
+        return recordDate >= customStartDate && recordDate <= customEndDate;
       });
     }
     return [];
@@ -96,18 +94,25 @@ export default function FinancialPanelPage() {
 
   const chartData = useMemo(() => {
     const dataMap = new Map<string, { ingresos: number; gastos: number; inversion: number }>();
+    
+    let isCustomRangeLong = false;
+    if(filterMode === 'custom' && customStartDate && customEndDate){
+      isCustomRangeLong = differenceInMonths(customEndDate, customStartDate) >= 2;
+    }
 
     filteredRecords.forEach(record => {
       const recordDate = parseDate(record.fecha);
       if(!isValid(recordDate)) return;
 
       let key = '';
-      if (viewType === 'daily' || filterMode === 'custom') {
-        key = format(recordDate, 'yyyy-MM-dd');
+      if (filterMode === 'custom') {
+          key = isCustomRangeLong ? format(recordDate, 'yyyy-MM') : format(recordDate, 'yyyy-MM-dd');
+      } else if (viewType === 'daily') {
+          key = format(recordDate, 'yyyy-MM-dd');
       } else if (viewType === 'monthly') {
-        key = format(recordDate, 'yyyy-MM');
+          key = format(recordDate, 'yyyy-MM');
       } else { // yearly
-        key = format(recordDate, 'yyyy');
+          key = format(recordDate, 'yyyy');
       }
       
       if (!dataMap.has(key)) {
@@ -125,15 +130,32 @@ export default function FinancialPanelPage() {
 
     return sortedEntries.map(([key, value]) => {
       let label = key;
-      const keyDate = parse(key, (viewType === 'daily' || filterMode === 'custom') ? 'yyyy-MM-dd' : (viewType === 'monthly' ? 'yyyy-MM' : 'yyyy'), new Date());
+      let keyFormat = 'yyyy';
+      if(filterMode === 'custom') {
+          keyFormat = isCustomRangeLong ? 'yyyy-MM' : 'yyyy-MM-dd';
+      } else {
+        switch(viewType) {
+            case 'daily': keyFormat = 'yyyy-MM-dd'; break;
+            case 'monthly': keyFormat = 'yyyy-MM'; break;
+            case 'yearly': keyFormat = 'yyyy'; break;
+        }
+      }
+
+      const keyDate = parse(key, keyFormat, new Date());
       if(isValid(keyDate)) {
-        if (viewType === 'daily' || (filterMode === 'custom' && viewType !== 'monthly')) label = format(keyDate, 'd MMM', { locale: es });
-        if (viewType === 'monthly' || (filterMode === 'custom' && viewType === 'monthly')) label = format(keyDate, 'MMM yyyy', { locale: es });
-        if (viewType === 'yearly') label = format(keyDate, 'yyyy', { locale: es });
+         if (filterMode === 'custom') {
+            label = isCustomRangeLong ? format(keyDate, 'MMM yyyy', { locale: es }) : format(keyDate, 'd MMM', { locale: es });
+         } else {
+            switch(viewType) {
+                case 'daily': label = format(keyDate, 'd MMM', { locale: es }); break;
+                case 'monthly': label = format(keyDate, 'MMM', { locale: es }); break;
+                case 'yearly': label = format(keyDate, 'yyyy'); break;
+            }
+         }
       }
       return { name: label, ...value };
     });
-  }, [filteredRecords, viewType, filterMode]);
+  }, [filteredRecords, viewType, filterMode, customStartDate, customEndDate]);
 
 
   const formatCurrency = (amount: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
@@ -229,3 +251,5 @@ const SummaryCard = ({ title, value, color }: { title: string; value: string; co
     </CardContent>
   </Card>
 );
+
+    
