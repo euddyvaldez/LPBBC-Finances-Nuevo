@@ -24,6 +24,8 @@ import { Autocomplete } from '@/components/Autocomplete';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useAuth } from '@/contexts/AuthProvider';
 
+const DESCRIPTION_MAX_LENGTH = 500;
+
 const recordSchema = z.object({
   id: z.string().optional(),
   fecha: z.date({ required_error: 'La fecha es requerida.' }),
@@ -31,7 +33,7 @@ const recordSchema = z.object({
   razonId: z.string().min(1, 'La razón es requerida.'),
   movimiento: z.enum(['INGRESOS', 'GASTOS', 'INVERSION'], { required_error: 'El movimiento es requerido.' }),
   monto: z.coerce.number().positive('El monto debe ser un número positivo.'),
-  descripcion: z.string().optional(),
+  descripcion: z.string().max(DESCRIPTION_MAX_LENGTH, `La descripción no puede exceder los ${DESCRIPTION_MAX_LENGTH} caracteres.`).optional(),
 });
 
 type RecordFormData = z.infer<typeof recordSchema>;
@@ -46,6 +48,8 @@ const RecordsForm = ({ record, onFinished }: { record?: FinancialRecord, onFinis
   const form = useForm<RecordFormData>({
     resolver: zodResolver(recordSchema),
   });
+
+  const watchedDescription = form.watch('descripcion');
 
   useEffect(() => {
     if (record) {
@@ -186,6 +190,9 @@ const RecordsForm = ({ record, onFinished }: { record?: FinancialRecord, onFinis
                           placeholder="Detalles del movimiento..."
                           allowCustomValue={true}
                         />
+                      <div className="text-xs text-right text-muted-foreground mt-1">
+                        {watchedDescription?.length || 0} / {DESCRIPTION_MAX_LENGTH}
+                      </div>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -402,6 +409,11 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
                     obj[header] = values[index];
                     return obj;
                 }, {} as {[key: string]: string});
+
+                if (row.descripcion && row.descripcion.length > DESCRIPTION_MAX_LENGTH) {
+                    errors.push(`Línea ${i + 1}: La descripción excede los ${DESCRIPTION_MAX_LENGTH} caracteres.`);
+                    continue;
+                }
 
                 const integranteId = integranteMap.get(row.integranteNombre?.toLowerCase());
                 const razonId = razonMap.get(row.razonDescripcion?.toLowerCase());

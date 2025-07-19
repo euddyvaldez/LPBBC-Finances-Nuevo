@@ -43,6 +43,8 @@ import { useMemo, useState } from 'react';
 import type { Movimiento } from '@/types';
 import { Autocomplete } from '@/components/Autocomplete';
 
+const DESCRIPTION_MAX_LENGTH = 500;
+
 const quickRecordSchema = z.object({
   fecha: z.date({
     required_error: 'La fecha es requerida.',
@@ -53,7 +55,7 @@ const quickRecordSchema = z.object({
   movimiento: z.enum(['INGRESOS', 'GASTOS', 'INVERSION'], {
     required_error: 'El tipo de movimiento es requerido.',
   }),
-  descripcion: z.string().optional(),
+  descripcion: z.string().max(DESCRIPTION_MAX_LENGTH, `La descripción no puede exceder los ${DESCRIPTION_MAX_LENGTH} caracteres.`).optional(),
 });
 
 export default function QuickRecordPage() {
@@ -72,6 +74,8 @@ export default function QuickRecordPage() {
       descripcion: '',
     },
   });
+  
+  const watchedDescription = form.watch('descripcion');
 
   const quickRazones = useMemo(() => {
     return razones
@@ -254,6 +258,9 @@ export default function QuickRecordPage() {
                         placeholder="Detalles del movimiento..."
                         allowCustomValue={true}
                       />
+                     <div className="text-xs text-right text-muted-foreground mt-1">
+                        {watchedDescription?.length || 0} / {DESCRIPTION_MAX_LENGTH}
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
