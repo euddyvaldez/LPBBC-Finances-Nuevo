@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -25,15 +26,17 @@ import {
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 const loginSchema = z.object({
-  email: z.string().email('Email no válido.'),
-  password: z.string().min(1, 'La contraseña es requerida.'),
+  email: z.string().email('Email no válido.').or(z.literal('')),
+  password: z.string().min(1, 'La contraseña es requerida.').or(z.literal('')),
 });
 
 export default function LoginPage() {
-  const { login, error } = useAuth();
+  const { error } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const router = useRouter();
 
   const form = useForm<z.infer<typeof loginSchema>>({
     resolver: zodResolver(loginSchema),
@@ -45,8 +48,11 @@ export default function LoginPage() {
 
   const onSubmit = async (values: z.infer<typeof loginSchema>) => {
     setIsSubmitting(true);
-    await login(values.email, values.password);
-    setIsSubmitting(false);
+    // Temporal: Redirigir directamente sin autenticar
+    router.push('/');
+    // Para reactivar la autenticación real, descomenta la siguiente línea y elimina router.push('/'):
+    // await login(values.email, values.password);
+    // setIsSubmitting(false);
   };
 
   return (
