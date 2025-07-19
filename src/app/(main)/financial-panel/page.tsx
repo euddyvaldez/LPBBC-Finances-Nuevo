@@ -117,8 +117,10 @@ export default function FinancialPanelPage() {
     return sortedEntries.map(([key, value]) => {
       let label = key;
       const keyDate = parseISO(key);
-      if (viewType === 'daily') label = format(keyDate, 'd MMM', { locale: es });
-      if (viewType === 'monthly') label = format(keyDate, 'MMM', { locale: es });
+      if(isValid(keyDate)) {
+        if (viewType === 'daily') label = format(keyDate, 'd MMM', { locale: es });
+        if (viewType === 'monthly') label = format(keyDate, 'MMM', { locale: es });
+      }
       return { name: label, ...value };
     });
   }, [filteredRecords, viewType, filterMode]);
@@ -193,7 +195,9 @@ export default function FinancialPanelPage() {
               <Button variant={chartType === 'line' ? 'default' : 'ghost'} onClick={() => setChartType('line')} className="flex-1">Línea</Button>
               <Button variant={chartType === 'pie' ? 'default' : 'ghost'} onClick={() => setChartType('pie')} className="flex-1">Pastel</Button>
             </div>
-            {chartData.length > 0 ? (
+            {loading ? (
+                <div className="text-center text-muted-foreground p-8">Cargando datos...</div>
+            ) : chartData.length > 0 ? (
                 <FinancialChart chartType={chartType} data={chartData} />
             ) : (
                 <div className="text-center text-muted-foreground p-8">No hay datos para el período y filtros seleccionados.</div>
