@@ -1,3 +1,4 @@
+
 'use client';
 import { useAuth } from '@/contexts/AuthProvider';
 import { useRouter } from 'next/navigation';
@@ -15,17 +16,13 @@ export default function MainLayout({
   const { user, loading } = useAuth();
   const router = useRouter();
 
-  /*
-  // TEMPORALMENTE DESACTIVADO: Se ha comentado el redirect para permitir el acceso sin login.
-  // Para reactivar la seguridad, descomenta este bloque.
   useEffect(() => {
     if (!loading && !user) {
       router.push('/login');
     }
   }, [user, loading, router]);
-  */
 
-  if (loading) {
+  if (loading || !user) {
     return (
       <div className="flex h-screen w-screen items-center justify-center">
         <Loader2 className="h-16 w-16 animate-spin text-primary" />

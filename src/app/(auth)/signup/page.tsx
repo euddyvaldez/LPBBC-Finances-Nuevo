@@ -26,14 +26,12 @@ import {
 import { useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-
 
 const signupSchema = z
   .object({
-    email: z.string().email('Email no válido.').or(z.literal('')),
-    password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres.').or(z.literal('')),
-    confirmPassword: z.string().or(z.literal('')),
+    email: z.string().email('Email no válido.'),
+    password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres.'),
+    confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
     message: 'Las contraseñas no coinciden.',
@@ -41,9 +39,8 @@ const signupSchema = z
   });
 
 export default function SignupPage() {
-  const { error } = useAuth();
+  const { signup, error } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const router = useRouter();
 
   const form = useForm<z.infer<typeof signupSchema>>({
     resolver: zodResolver(signupSchema),
@@ -56,11 +53,13 @@ export default function SignupPage() {
 
   const onSubmit = async (values: z.infer<typeof signupSchema>) => {
     setIsSubmitting(true);
-    // Temporal: Redirigir directamente sin autenticar
-    router.push('/');
-    // Para reactivar la autenticación real, descomenta la siguiente línea y elimina router.push('/'):
-    // await signup(values.email, values.password);
-    // setIsSubmitting(false);
+    try {
+      await signup(values.email, values.password);
+    } catch (e) {
+      // Error is handled in AuthProvider
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -136,4 +135,3 @@ export default function SignupPage() {
     </div>
   );
 }
-
