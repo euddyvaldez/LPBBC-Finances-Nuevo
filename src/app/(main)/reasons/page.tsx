@@ -36,7 +36,7 @@ export default function ReasonsPage() {
       return;
     }
     try {
-      await addRazon(newRazonDesc);
+      await addRazon(newRazonDesc, false, false);
       toast({ title: 'Éxito', description: 'Razón agregada.' });
       setNewRazonDesc('');
     } catch (error) {
@@ -68,7 +68,8 @@ export default function ReasonsPage() {
       toast({ title: 'Éxito', description: 'Razón actualizada.' });
       handleCancelEdit();
     } catch (error) {
-      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo actualizar la razón.' });
+       const message = error instanceof Error ? error.message : 'No se pudo actualizar la razón.';
+       toast({ variant: 'destructive', title: 'Error', description: message });
     }
   };
 
@@ -82,7 +83,8 @@ export default function ReasonsPage() {
         await deleteRazon(id);
         toast({ title: 'Éxito', description: 'Razón eliminada.' });
     } catch (error) {
-        toast({ variant: 'destructive', title: 'Error', description: 'No se pudo eliminar la razón.' });
+        const message = error instanceof Error ? error.message : 'No se pudo eliminar la razón.';
+        toast({ variant: 'destructive', title: 'Error', description: message });
     }
   };
 
@@ -91,15 +93,17 @@ export default function ReasonsPage() {
       await updateRazon(razon.id, { isQuickReason: !razon.isQuickReason });
       toast({ title: 'Éxito', description: `'${razon.descripcion}' ${!razon.isQuickReason ? 'ahora es una razón rápida.' : 'ya no es una razón rápida.'}` });
     } catch (error) {
-      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo actualizar la razón.' });
+      const message = error instanceof Error ? error.message : 'No se pudo actualizar la razón.';
+      toast({ variant: 'destructive', title: 'Error', description: message });
     }
   };
 
   const exportToCSV = () => {
-    const headers = ['descripcion', 'isQuickReason'];
+    const headers = ['descripcion', 'isQuickReason', 'isProtected'];
     const rows = filteredAndSortedRazones.map(r => [
       `"${r.descripcion.replace(/"/g, '""')}"`,
-      r.isQuickReason
+      !!r.isQuickReason,
+      !!r.isProtected,
     ].join(','));
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows].join('\n');
     const encodedUri = encodeURI(csvContent);
@@ -136,9 +140,11 @@ export default function ReasonsPage() {
       }
       try {
         const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
-        const headers = lines[0].split(',').map(h => h.trim());
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
         const descIndex = headers.indexOf('descripcion');
-        const quickIndex = headers.indexOf('isQuickReason');
+        const quickIndex = headers.indexOf('isquickreason');
+        const protectedIndex = headers.indexOf('isprotected');
+
 
         if (descIndex === -1) {
           throw new Error('La columna "descripcion" no fue encontrada en el CSV.');
@@ -153,10 +159,14 @@ export default function ReasonsPage() {
           
           if (descripcion) {
             const isQuickReason = quickIndex !== -1 ? (values[quickIndex]?.trim().toLowerCase() === 'true') : false;
+            const isProtected = protectedIndex !== -1 ? (values[protectedIndex]?.trim().toLowerCase() === 'true') : false;
+
+            const item = { descripcion, isQuickReason, isProtected };
+
             if (mode === 'add' && !existingDescriptions.has(descripcion.toLowerCase())) {
-                newRazones.push({ descripcion, isQuickReason });
+                newRazones.push(item);
             } else if (mode === 'replace') {
-                newRazones.push({ descripcion, isQuickReason });
+                newRazones.push(item);
             }
           }
         }
@@ -182,6 +192,8 @@ export default function ReasonsPage() {
     return razones
       .filter(r => r.descripcion.toLowerCase().includes(searchTerm.toLowerCase()))
       .sort((a, b) => {
+        if (a.isProtected && !b.isProtected) return -1;
+        if (!a.isProtected && b.isProtected) return 1;
         switch (sortOrder) {
           case 'alpha-asc': return a.descripcion.localeCompare(b.descripcion);
           case 'alpha-desc': return b.descripcion.localeCompare(a.descripcion);
@@ -255,18 +267,18 @@ export default function ReasonsPage() {
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button type="button" size="icon" variant="ghost" onClick={() => handleToggleQuickReason(razon)}>
-                                <Zap className={cn('h-5 w-5', razon.isQuickReason ? 'text-primary fill-primary' : 'text-muted-foreground')}/>
+                            <Button type="button" size="icon" variant="ghost" onClick={() => handleToggleQuickReason(razon)} disabled={razon.isProtected}>
+                                <Zap className={cn('h-5 w-5', razon.isQuickReason ? 'text-primary fill-primary' : 'text-muted-foreground', razon.isProtected && 'opacity-50 cursor-not-allowed')}/>
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                            <p>Marcar como Razón Rápida</p>
+                            <p>{razon.isProtected ? 'No se puede modificar una razón protegida' : 'Marcar como Razón Rápida'}</p>
                         </TooltipContent>
                     </Tooltip>
                     {editingId === razon.id ? (
                       <Input value={editingDesc} onChange={(e) => setEditingDesc(e.target.value)} className="flex-1"/>
                     ) : (
-                      <span className="font-medium truncate">{razon.descripcion}</span>
+                      <span className={cn("font-medium truncate", razon.isProtected && "text-muted-foreground")}>{razon.descripcion}</span>
                     )}
                   </div>
                   <div className="flex items-center gap-2">
@@ -277,10 +289,10 @@ export default function ReasonsPage() {
                       </>
                     ) : (
                       <>
-                        <Button type="button" size="icon" variant="ghost" onClick={() => handleEdit(razon)}><Pencil className="h-4 w-4"/></Button>
+                        <Button type="button" size="icon" variant="ghost" onClick={() => handleEdit(razon)} disabled={razon.isProtected}><Pencil className="h-4 w-4"/></Button>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
-                            <Button type="button" size="icon" variant="ghost" className="text-destructive"><Trash2 className="h-4 w-4"/></Button>
+                            <Button type="button" size="icon" variant="ghost" className="text-destructive" disabled={razon.isProtected}><Trash2 className="h-4 w-4"/></Button>
                           </AlertDialogTrigger>
                           <AlertDialogContent>
                             <AlertDialogHeader>
@@ -323,5 +335,3 @@ export default function ReasonsPage() {
     </div>
   );
 }
-
-    

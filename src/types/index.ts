@@ -5,6 +5,7 @@ export interface Razon {
   userId: string;
   descripcion: string;
   isQuickReason: boolean;
+  isProtected?: boolean;
 }
 
 export interface Integrante {

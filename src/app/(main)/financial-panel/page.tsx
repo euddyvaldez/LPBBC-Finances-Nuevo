@@ -157,9 +157,7 @@ export default function FinancialPanelPage() {
                 const date = r.fecha ? parseDate(r.fecha) : null;
                 return date && isValid(date) ? date.getFullYear() : null;
             }).filter(Boolean));
-            if (allRecordsYears.size > 1) {
-                // If there is more than one year of data, default to yearly view in the chart
-            } else {
+            if (allRecordsYears.size === 1) {
                  activeViewType = 'monthly';
             }
         }
@@ -325,5 +323,3 @@ const SummaryCard = ({ title, value, color }: { title: string; value: string; co
     </CardContent>
   </Card>
 );
-
-    

@@ -5,7 +5,8 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, type User } from 'firebase/auth';
 import { auth, db, isFirebaseConfigured } from '@/lib/firebase';
 import { useRouter, usePathname } from 'next/navigation';
-import { doc, setDoc } from 'firebase/firestore';
+import { addIntegrante as apiAddIntegrante, addRazon as apiAddRazon } from '@/lib/data';
+
 
 interface AuthContextType {
   user: User | null;
@@ -78,8 +79,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-      // You can create a user document in Firestore here if needed
-      // For example: await setDoc(doc(db, "users", user.uid), { email: user.email });
+      
+      // Create default protected data for the new user
+      await Promise.all([
+        apiAddIntegrante("INVITADO", true, user.uid),
+        apiAddRazon("MENSUALIDAD", true, true, user.uid),
+        apiAddRazon("SEMANAL", true, true, user.uid)
+      ]);
+      
       router.push('/');
     } catch (e: any) {
       handleAuthError(e);

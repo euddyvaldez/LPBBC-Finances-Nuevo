@@ -28,22 +28,20 @@ export function Autocomplete({
   allowCustomValue = false,
 }: AutocompleteProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [inputValue, setInputValue] = useState('');
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const selectedOption = options.find(
-    (option) =>
-      (allowCustomValue && option.value === value) ||
-      (!allowCustomValue && option.value === value)
-  );
+  const getLabelFromValue = useCallback((currentValue: string) => {
+    if (allowCustomValue) {
+      return currentValue;
+    }
+    return options.find(o => o.value === currentValue)?.label || '';
+  }, [options, allowCustomValue]);
+
+  const [inputValue, setInputValue] = useState(() => getLabelFromValue(value));
 
   useEffect(() => {
-    if (allowCustomValue) {
-      setInputValue(value || '');
-    } else {
-      setInputValue(selectedOption?.label || '');
-    }
-  }, [value, selectedOption, allowCustomValue]);
+    setInputValue(getLabelFromValue(value));
+  }, [value, getLabelFromValue]);
 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -59,25 +57,24 @@ export function Autocomplete({
 
   const handleSelectOption = (option: AutocompleteOption) => {
     onChange(option.value);
-    setInputValue(allowCustomValue ? option.value : option.label);
+    setInputValue(getLabelFromValue(option.value));
     setIsOpen(false);
   };
   
   const handleInputBlur = () => {
-    if (allowCustomValue) return;
-
-    if (!value || !options.some(o => o.value === value)) {
-        onChange('');
-        setInputValue('');
-    }
+     setTimeout(() => {
+      if (!isOpen) {
+        setInputValue(getLabelFromValue(value));
+      }
+    }, 200);
   };
 
   const handleClickOutside = useCallback((event: MouseEvent) => {
     if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
       setIsOpen(false);
-      handleInputBlur();
+      setInputValue(getLabelFromValue(value));
     }
-  }, [value]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [value, getLabelFromValue]);
 
   useEffect(() => {
     document.addEventListener('mousedown', handleClickOutside);
@@ -114,8 +111,10 @@ export function Autocomplete({
                         'w-full text-left px-2 py-1.5 text-sm rounded-md hover:bg-accent',
                         { 'bg-accent': value === option.value && !allowCustomValue }
                       )}
-                      onMouseDown={(e) => e.preventDefault()} // Prevent input blur on click
-                      onClick={() => handleSelectOption(option)}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        handleSelectOption(option);
+                      }}
                     >
                       {option.label}
                     </button>
@@ -124,7 +123,7 @@ export function Autocomplete({
               </ul>
             ) : (
               <p className="p-2 text-sm text-center text-muted-foreground">
-                No se encontraron resultados.
+                {allowCustomValue ? "Escribe para añadir un valor personalizado" : "No se encontraron resultados."}
               </p>
             )}
           </ScrollArea>

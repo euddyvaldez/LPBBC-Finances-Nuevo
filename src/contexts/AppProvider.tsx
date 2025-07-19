@@ -23,7 +23,7 @@ interface AppContextType {
   importIntegrantes: (integrantes: Omit<Integrante, 'id'| 'userId'>[], mode: 'add' | 'replace') => Promise<void>;
   updateIntegrante: (id: string, nombre: string) => Promise<void>;
   deleteIntegrante: (id: string) => Promise<void>;
-  addRazon: (descripcion: string, isQuickReason?: boolean) => Promise<void>;
+  addRazon: (descripcion: string, isQuickReason?: boolean, isProtected?: boolean) => Promise<void>;
   importRazones: (razones: Omit<Razon, 'id'| 'userId'>[], mode: 'add' | 'replace') => Promise<void>;
   updateRazon: (id: string, updates: Partial<Omit<Razon, 'id' | 'userId'>>) => Promise<void>;
   deleteRazon: (id: string) => Promise<void>;
@@ -53,14 +53,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setLoading(true);
 
     const createQuery = (collectionName: string) => query(collection(db, collectionName), where("userId", "==", user.uid));
-    
-    // This will only create them if they don't exist for the user.
-    if (isFirebaseConfigured && db) {
-        api.addIntegrante("INVITADO", true, user.uid);
-        api.addRazon("MENSUALIDAD", true, user.uid);
-        api.addRazon("SEMANAL", true, user.uid);
-    }
-
 
     const unsubscribers = [
       onSnapshot(createQuery('integrantes'), (snapshot) => {
@@ -122,9 +114,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!user) throw new Error("Usuario no autenticado");
     return api.importIntegrantes(integrantes, mode, user.uid);
   };
-   const addRazonWithUserId = (descripcion: string, isQuickReason?: boolean) => {
+   const addRazonWithUserId = (descripcion: string, isQuickReason?: boolean, isProtected?: boolean) => {
     if (!user) throw new Error("Usuario no autenticado");
-    return api.addRazon(descripcion, isQuickReason, user.uid);
+    return api.addRazon(descripcion, isQuickReason, isProtected, user.uid);
   }
   const importRazonesWithUserId = (razones: Omit<Razon, 'id' | 'userId'>[], mode: 'add' | 'replace') => {
     if (!user) throw new Error("Usuario no autenticado");

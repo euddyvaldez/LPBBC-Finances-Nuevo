@@ -64,14 +64,14 @@ export const deleteIntegrante = async (id: string): Promise<void> => {
 
 
 // Razones
-export const addRazon = async (descripcion: string, isQuickReason = false, userId: string): Promise<void> => {
+export const addRazon = async (descripcion: string, isQuickReason = false, isProtected = false, userId: string): Promise<void> => {
     if (!userId) throw new Error("User ID is required");
     const upperCaseDesc = descripcion.toUpperCase();
     const razonesCol = collection(db, 'razones');
     const q = query(razonesCol, where("descripcion", "==", upperCaseDesc), where("userId", "==", userId));
     const querySnapshot = await getDocs(q);
     if (querySnapshot.empty) {
-        await addDoc(razonesCol, { descripcion: upperCaseDesc, isQuickReason, userId });
+        await addDoc(razonesCol, { descripcion: upperCaseDesc, isQuickReason, isProtected, userId });
     }
 };
 
@@ -80,7 +80,7 @@ export const importRazones = async (razonesToImport: Omit<Razon, 'id' | 'userId'
     const razonesCol = collection(db, 'razones');
     
     if (mode === 'replace') {
-        const q = query(razonesCol, where("userId", "==", userId));
+        const q = query(razonesCol, where("isProtected", "!=", true), where("userId", "==", userId));
         const snapshot = await getDocs(q);
         snapshot.docs.forEach(doc => batch.delete(doc.ref));
     }
@@ -95,6 +95,10 @@ export const importRazones = async (razonesToImport: Omit<Razon, 'id' | 'userId'
 
 export const updateRazon = async (id: string, updates: Partial<Omit<Razon, 'id' | 'userId'>>): Promise<void> => {
     const docRef = doc(db, 'razones', id);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists() && docSnap.data().isProtected) {
+        throw new Error('No se puede modificar una razón protegida.');
+    }
     if(updates.descripcion) {
       updates.descripcion = updates.descripcion.toUpperCase();
     }
@@ -102,7 +106,12 @@ export const updateRazon = async (id: string, updates: Partial<Omit<Razon, 'id' 
 };
 
 export const deleteRazon = async (id: string): Promise<void> => {
-    await deleteDoc(doc(db, 'razones', id));
+    const docRef = doc(db, 'razones', id);
+    const docSnap = await getDoc(docRef);
+    if (docSnap.exists() && docSnap.data().isProtected) {
+        throw new Error('No se puede eliminar una razón protegida.');
+    }
+    await deleteDoc(docRef);
 };
 
 
