@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/select';
 import { DatePicker } from '@/components/DatePicker';
 import { useAppContext } from '@/contexts/AppProvider';
-import { subMonths, startOfMonth, endOfMonth, startOfYear, endOfYear, format, parse, isValid, differenceInMonths } from 'date-fns';
+import { subMonths, format, parse, isValid, differenceInMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { FinancialChart } from '@/components/FinancialChart';
 import type { FinancialRecord } from '@/types';
@@ -53,26 +53,36 @@ export default function FinancialPanelPage() {
     let recordsToFilter = financialRecords.filter(r => r.fecha && isValid(parseDate(r.fecha)));
 
     if (filterMode === 'predefined') {
-      if (viewType === 'yearly') {
-        return recordsToFilter;
-      }
       const year = parseInt(selectedYear, 10);
-      if (viewType === 'monthly') {
-        const startDate = startOfYear(new Date(year, 0, 1));
-        const endDate = endOfYear(new Date(year, 0, 1));
-        return recordsToFilter.filter(r => {
-          const recordDate = parseDate(r.fecha);
-          return recordDate >= startDate && recordDate <= endDate;
-        });
-      } else if (viewType === 'daily') {
-        const month = parseInt(selectedMonth, 10);
-        const startDate = startOfMonth(new Date(year, month, 1));
-        const endDate = endOfMonth(new Date(year, month, 1));
-        return recordsToFilter.filter(r => {
-          const recordDate = parseDate(r.fecha);
-          return recordDate >= startDate && recordDate <= endDate;
-        });
+      const month = parseInt(selectedMonth, 10);
+      
+      let startDate: Date;
+      let endDate: Date;
+
+      switch (viewType) {
+        case 'yearly':
+          return recordsToFilter;
+        
+        case 'monthly':
+            startDate = new Date(year, 0, 1);
+            endDate = new Date(year, 11, 31, 23, 59, 59);
+            break;
+            
+        case 'daily':
+            startDate = new Date(year, month, 1);
+            const nextMonth = new Date(year, month + 1, 1);
+            endDate = new Date(nextMonth.getTime() - 1);
+            break;
+
+        default:
+            return [];
       }
+      
+      return recordsToFilter.filter(r => {
+        const recordDate = parseDate(r.fecha);
+        return recordDate >= startDate && recordDate <= endDate;
+      });
+
     } else { // custom range
       if (!customStartDate || !customEndDate) return [];
       const startDate = customStartDate;
@@ -82,7 +92,6 @@ export default function FinancialPanelPage() {
         return recordDate >= startDate && recordDate <= endDate;
       });
     }
-    return [];
   }, [financialRecords, filterMode, viewType, selectedYear, selectedMonth, customStartDate, customEndDate]);
 
   const summary = useMemo(() => {
@@ -105,7 +114,8 @@ export default function FinancialPanelPage() {
     
     let isCustomRangeLong = false;
     if(filterMode === 'custom' && customStartDate && customEndDate){
-      isCustomRangeLong = differenceInMonths(customEndDate, customStartDate) >= 2;
+      const diff = differenceInMonths(customEndDate, customStartDate);
+      isCustomRangeLong = diff >= 2;
     }
 
     filteredRecords.forEach(record => {
@@ -265,5 +275,7 @@ const SummaryCard = ({ title, value, color }: { title: string; value: string; co
     </CardContent>
   </Card>
 );
+
+    
 
     
