@@ -191,7 +191,7 @@ const RecordsForm = ({ record, onFinished }: { record?: FinancialRecord, onFinis
                           allowCustomValue={true}
                         />
                       <div className="text-xs text-right text-muted-foreground mt-1">
-                        {watchedDescription?.length || 0} / {DESCRIPTION_MAX_LENGTH}
+                        {(watchedDescription || '')?.length} / {DESCRIPTION_MAX_LENGTH}
                       </div>
                       <FormMessage />
                     </FormItem>
@@ -298,6 +298,27 @@ const RecordCard = ({ record, getIntegranteName, getRazonDesc }: { record: Finan
     );
 };
 
+const parseCsvLine = (line: string): string[] => {
+    const result: string[] = [];
+    let currentField = '';
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+
+        if (char === '"' && (i === 0 || line[i - 1] !== '\\')) {
+            inQuotes = !inQuotes;
+        } else if (char === ',' && !inQuotes) {
+            result.push(currentField.trim());
+            currentField = '';
+        } else {
+            currentField += char;
+        }
+    }
+    result.push(currentField.trim());
+    return result.map(field => field.startsWith('"') && field.endsWith('"') ? field.slice(1, -1) : field);
+}
+
 
 const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
   const { integrantes, razones, importFinancialRecords } = useAppContext();
@@ -390,7 +411,7 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
         }
         try {
             const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
-            const headers = lines[0].split(',').map(h => h.trim());
+            const headers = parseCsvLine(lines[0]).map(h => h.trim());
             
             const requiredHeaders = ['fecha', 'integranteNombre', 'movimiento', 'razonDescripcion', 'descripcion', 'monto'];
             const missingHeaders = requiredHeaders.filter(h => !headers.includes(h));
@@ -405,7 +426,11 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
             const razonMap = new Map(razones.map(r => [r.descripcion.toLowerCase(), r.id]));
 
             for (let i = 1; i < lines.length; i++) {
-                const values = lines[i].split(',').map(v => v.replace(/"/g, '').trim());
+                const values = parseCsvLine(lines[i]);
+                if (values.length !== headers.length) {
+                    errors.push(`Línea ${i + 1}: El número de columnas (${values.length}) no coincide con el de las cabeceras (${headers.length}).`);
+                    continue;
+                }
                 const row = headers.reduce((obj, header, index) => {
                     obj[header] = values[index];
                     return obj;
@@ -601,4 +626,3 @@ export default function RecordsPage() {
         </div>
     );
 }
-
