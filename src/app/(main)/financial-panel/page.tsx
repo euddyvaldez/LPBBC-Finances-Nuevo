@@ -19,7 +19,7 @@ import type { FinancialRecord } from '@/types';
 import { Loader2 } from 'lucide-react';
 
 type FilterMode = 'predefined' | 'custom';
-type ViewType = 'monthly' | 'daily' | 'yearly';
+type ViewType = 'yearly' | 'monthly' | 'daily';
 type ChartType = 'line' | 'bar' | 'pie';
 
 const parseDate = (dateStr: string) => parse(dateStr, 'dd/MM/yyyy', new Date());
@@ -229,35 +229,35 @@ export default function FinancialPanelPage() {
                 </div>
                 
                 {filterMode === 'predefined' ? (
-                <div className="flex flex-col sm:flex-row gap-2">
-                    <Select value={viewType} onValueChange={(v) => setViewType(v as ViewType)}>
-                    <SelectTrigger className="w-full sm:w-[180px]"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="yearly">Historial Completo</SelectItem>
-                        <SelectItem value="monthly">Tendencia Mensual</SelectItem>
-                        <SelectItem value="daily">Tendencia Diaria</SelectItem>
-                    </SelectContent>
-                    </Select>
-                    {viewType !== 'yearly' && (
-                    <Select value={selectedYear} onValueChange={setSelectedYear}>
-                        <SelectTrigger className="w-full sm:w-[120px]"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                        {availableYears.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    )}
-                    {viewType === 'daily' && (
-                    <Select value={selectedMonth} onValueChange={setSelectedMonth}>
-                        <SelectTrigger className="w-full sm:w-[150px]"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                        {Array.from({ length: 12 }, (_, i) => (
-                            <SelectItem key={i} value={String(i)}>
-                            {format(new Date(2000, i, 1), 'MMMM', { locale: es })}
-                            </SelectItem>
-                        ))}
-                        </SelectContent>
-                    </Select>
-                    )}
+                <div className="flex flex-col gap-4">
+                    <div className="flex bg-muted p-1 rounded-lg w-full sm:w-[320px]">
+                      <Button variant={viewType === 'yearly' ? 'default' : 'ghost'} onClick={() => setViewType('yearly')} className="flex-1 text-xs sm:text-sm">Anual</Button>
+                      <Button variant={viewType === 'monthly' ? 'default' : 'ghost'} onClick={() => setViewType('monthly')} className="flex-1 text-xs sm:text-sm">Mensual</Button>
+                      <Button variant={viewType === 'daily' ? 'default' : 'ghost'} onClick={() => setViewType('daily')} className="flex-1 text-xs sm:text-sm">Diaria</Button>
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-2">
+                        {viewType !== 'yearly' && (
+                        <Select value={selectedYear} onValueChange={setSelectedYear}>
+                            <SelectTrigger className="w-full sm:w-[120px]"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                            {availableYears.map(y => <SelectItem key={y} value={String(y)}>{y}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                        )}
+                        {viewType === 'daily' && (
+                        <Select value={selectedMonth} onValueChange={setSelectedMonth}>
+                            <SelectTrigger className="w-full sm:w-[150px]"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                            {Array.from({ length: 12 }, (_, i) => (
+                                <SelectItem key={i} value={String(i)}>
+                                {format(new Date(2000, i, 1), 'MMMM', { locale: es })}
+                                </SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        )}
+                    </div>
                 </div>
                 ) : (
                 <div className="flex flex-col gap-4">
