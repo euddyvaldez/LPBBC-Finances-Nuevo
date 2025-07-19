@@ -16,7 +16,7 @@ import { es } from 'date-fns/locale';
 const parseDate = (dateStr: string) => parse(dateStr, 'dd/MM/yyyy', new Date());
 
 export default function DashboardPage() {
-  const { financialRecords, loading, razones } = useAppContext();
+  const { financialRecords, loading, razones, integrantes } = useAppContext();
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [citas, setCitas] = useState<Cita[]>([]);
   const [currentCitaIndex, setCurrentCitaIndex] = useState(0);
@@ -145,7 +145,7 @@ export default function DashboardPage() {
         averageDailyRecords,
         top5Reasons
     };
-  }, [financialRecords, razones]);
+  }, [financialRecords, razones, integrantes]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-MX', {
@@ -153,6 +153,9 @@ export default function DashboardPage() {
       currency: 'MXN',
     }).format(amount);
   };
+
+  const getIntegranteName = (id: string) => integrantes.find((i) => i.id === id)?.nombre || 'N/A';
+  const getRazonDesc = (id: string) => razones.find((r) => r.id === id)?.descripcion || 'N/A';
 
   if (loading) {
     return (
@@ -266,8 +269,8 @@ export default function DashboardPage() {
                            return (
                            <li key={record.id} className="flex justify-between items-center">
                                <div>
-                                   <p className="font-medium text-sm">{record.descripcion}</p>
-                                   <p className="text-xs text-muted-foreground">{formattedDate}</p>
+                                   <p className="font-medium text-sm">{getIntegranteName(record.integranteId)}</p>
+                                   <p className="text-xs text-muted-foreground">{getRazonDesc(record.razonId)} - {formattedDate}</p>
                                </div>
                                <span className={cn('font-mono font-semibold text-sm', monto >= 0 ? 'text-green-500' : 'text-red-500')}>
                                    {formatCurrency(monto)}
@@ -332,5 +335,4 @@ export default function DashboardPage() {
       </Card>
     </div>
   );
-
-    
+}
