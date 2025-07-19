@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { format, parse, isValid } from 'date-fns';
+import { format, parse, isValid, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Download, Loader2, Upload, Tag, User, Calendar as CalendarIcon, Pencil, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -39,7 +39,7 @@ type RecordFormData = z.infer<typeof recordSchema>;
 const parseDate = (dateStr: string) => parse(dateStr, 'dd/MM/yyyy', new Date());
 
 const RecordsForm = ({ record, onFinished }: { record?: FinancialRecord, onFinished?: () => void }) => {
-  const { razones, integrantes, addFinancialRecord, updateFinancialRecord, financialRecords } = useAppContext();
+  const { razones, integrantes, addFinancialRecord, updateFinancialRecord, financialRecords, recordDates } = useAppContext();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -113,6 +113,11 @@ const RecordsForm = ({ record, onFinished }: { record?: FinancialRecord, onFinis
 
   const title = record?.id ? 'Editar Registro' : 'Añadir Nuevo Registro';
 
+  const disabledDates = (date: Date) => {
+    if (record) return false; // Allow any date when editing
+    return !recordDates.has(startOfDay(date).getTime());
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -130,7 +135,14 @@ const RecordsForm = ({ record, onFinished }: { record?: FinancialRecord, onFinis
                                 <CalendarIcon className="ml-auto h-4 w-4 opacity-50" /></Button>
                             </FormControl>
                         </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start"><Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /></PopoverContent>
+                        <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar 
+                                mode="single" 
+                                selected={field.value} 
+                                onSelect={field.onChange}
+                                disabled={(date) => date > new Date() || date < new Date('1900-01-01') || disabledDates(date)}
+                                initialFocus />
+                        </PopoverContent>
                         </Popover><FormMessage />
                     </FormItem>)} />
                 

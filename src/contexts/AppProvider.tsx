@@ -1,16 +1,18 @@
 
 'use client';
-import React, { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo } from 'react';
 import type { FinancialRecord, Integrante, Razon } from '@/types';
 import * as api from '@/lib/data';
 import { onSnapshot, collection, query, where } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from '@/lib/firebase';
 import { useAuth } from './AuthProvider';
+import { parse, isValid, startOfDay } from 'date-fns';
 
 interface AppContextType {
   integrantes: Integrante[];
   razones: Razon[];
   financialRecords: FinancialRecord[];
+  recordDates: Set<number>;
   loading: boolean;
   error: Error | null;
   addFinancialRecord: (record: Omit<FinancialRecord, 'id' | 'userId'>) => Promise<void>;
@@ -28,6 +30,8 @@ interface AppContextType {
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
+
+const parseDate = (dateStr: string) => parse(dateStr, 'dd/MM/yyyy', new Date());
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
@@ -89,6 +93,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     };
   }, [user]);
 
+  const recordDates = useMemo(() => {
+    const dates = new Set<number>();
+    financialRecords.forEach(record => {
+        if(record.fecha) {
+            const date = parseDate(record.fecha);
+            if (isValid(date)) {
+                dates.add(startOfDay(date).getTime());
+            }
+        }
+    });
+    return dates;
+  }, [financialRecords]);
+
   const addFinancialRecordWithUserId = (record: Omit<FinancialRecord, 'id' | 'userId'>) => {
     if (!user) throw new Error("Usuario no autenticado");
     return api.addFinancialRecord(record, user.uid);
@@ -119,6 +136,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     integrantes,
     razones,
     financialRecords,
+    recordDates,
     loading,
     error,
     addFinancialRecord: addFinancialRecordWithUserId,

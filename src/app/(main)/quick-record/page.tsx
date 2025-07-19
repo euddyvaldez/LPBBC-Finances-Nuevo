@@ -3,7 +3,7 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { format } from 'date-fns';
+import { format, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Calendar as CalendarIcon, Loader2 } from 'lucide-react';
 import {
@@ -57,7 +57,7 @@ const quickRecordSchema = z.object({
 });
 
 export default function QuickRecordPage() {
-  const { razones, integrantes, addFinancialRecord, loading, financialRecords } = useAppContext();
+  const { razones, integrantes, addFinancialRecord, loading, financialRecords, recordDates } = useAppContext();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -126,6 +126,10 @@ export default function QuickRecordPage() {
     return Array.from(descriptions).map(d => ({ value: d, label: d }));
   }, [financialRecords]);
 
+  const disabledDates = (date: Date) => {
+    return !recordDates.has(startOfDay(date).getTime());
+  }
+
   return (
     <div className="space-y-6">
        <Card className="max-w-2xl mx-auto">
@@ -170,7 +174,7 @@ export default function QuickRecordPage() {
                           selected={field.value}
                           onSelect={field.onChange}
                           disabled={(date) =>
-                            date > new Date() || date < new Date('1900-01-01')
+                            date > new Date() || date < new Date('1900-01-01') || disabledDates(date)
                           }
                           initialFocus
                         />
