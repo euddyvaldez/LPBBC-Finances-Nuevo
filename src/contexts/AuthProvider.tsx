@@ -38,11 +38,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       (user) => { // onNext observer
         setUser(user);
         setLoading(false);
+        /*
+        // TEMPORALMENTE DESACTIVADO: Se ha comentado el redirect para permitir el acceso sin login.
+        // Para reactivar la seguridad, descomenta este bloque.
         if (user && publicRoutes.includes(pathname)) {
           router.push('/');
         } else if (!user && !publicRoutes.includes(pathname)) {
           router.push('/login');
         }
+        */
       },
       (error) => { // onError observer
         console.error("Auth state error:", error);
