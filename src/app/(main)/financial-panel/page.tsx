@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/select';
 import { DatePicker } from '@/components/DatePicker';
 import { useAppContext } from '@/contexts/AppProvider';
-import { subMonths, startOfMonth, endOfMonth, startOfYear, endOfYear, format, parseISO } from 'date-fns';
+import { subMonths, startOfMonth, endOfMonth, startOfYear, endOfYear, format, parseISO, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { FinancialChart } from '@/components/FinancialChart';
 import type { FinancialRecord } from '@/types';
@@ -30,7 +30,10 @@ export default function FinancialPanelPage() {
   const [customEndDate, setCustomEndDate] = useState<Date | undefined>(new Date());
   
   const availableYears = useMemo(() => {
-    const years = new Set(financialRecords.map(r => new Date(r.fecha).getFullYear()));
+    const years = new Set(financialRecords.map(r => {
+        const date = r.fecha ? parseISO(r.fecha) : null;
+        return date && isValid(date) ? date.getFullYear() : null;
+    }).filter(y => y !== null) as Set<number>);
     return Array.from(years).sort((a, b) => b - a);
   }, [financialRecords]);
 
@@ -38,7 +41,8 @@ export default function FinancialPanelPage() {
   const [selectedMonth, setSelectedMonth] = useState<string>(String(new Date().getMonth()));
   
   const filteredRecords = useMemo(() => {
-    let recordsToFilter = financialRecords;
+    let recordsToFilter = financialRecords.filter(r => r.fecha && isValid(parseISO(r.fecha)));
+
     if (filterMode === 'predefined') {
       const year = parseInt(selectedYear);
       if (viewType === 'monthly') {
@@ -86,13 +90,16 @@ export default function FinancialPanelPage() {
     const dataMap = new Map<string, { ingresos: number; gastos: number; inversion: number }>();
 
     filteredRecords.forEach(record => {
+      const recordDate = parseISO(record.fecha);
+      if(!isValid(recordDate)) return;
+
       let key = '';
       if (viewType === 'daily' || filterMode === 'custom') {
-        key = format(parseISO(record.fecha), 'yyyy-MM-dd');
+        key = format(recordDate, 'yyyy-MM-dd');
       } else if (viewType === 'monthly') {
-        key = format(parseISO(record.fecha), 'yyyy-MM');
+        key = format(recordDate, 'yyyy-MM');
       } else { // yearly
-        key = format(parseISO(record.fecha), 'yyyy');
+        key = format(recordDate, 'yyyy');
       }
       
       if (!dataMap.has(key)) {
@@ -109,8 +116,9 @@ export default function FinancialPanelPage() {
 
     return sortedEntries.map(([key, value]) => {
       let label = key;
-      if (viewType === 'daily') label = format(parseISO(key), 'd MMM', { locale: es });
-      if (viewType === 'monthly') label = format(parseISO(key), 'MMM', { locale: es });
+      const keyDate = parseISO(key);
+      if (viewType === 'daily') label = format(keyDate, 'd MMM', { locale: es });
+      if (viewType === 'monthly') label = format(keyDate, 'MMM', { locale: es });
       return { name: label, ...value };
     });
   }, [filteredRecords, viewType, filterMode]);

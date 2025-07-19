@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { getCitas } from '@/lib/data';
 import type { Cita, FinancialRecord } from '@/types';
 import Link from 'next/link';
-import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO } from 'date-fns';
+import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 export default function DashboardPage() {
@@ -41,13 +41,15 @@ export default function DashboardPage() {
   }, [citas.length]);
 
   const { balance, monthlyIncome, monthlyExpenses, recentRecords } = useMemo(() => {
-    const balance = financialRecords.reduce((acc, record) => acc + record.monto, 0);
+    const validRecords = financialRecords.filter(r => r.fecha && isValid(parseISO(r.fecha)));
+
+    const balance = validRecords.reduce((acc, record) => acc + record.monto, 0);
     
     const now = new Date();
     const monthStart = startOfMonth(now);
     const monthEnd = endOfMonth(now);
 
-    const monthlyRecords = financialRecords.filter(r => isWithinInterval(parseISO(r.fecha), { start: monthStart, end: monthEnd }));
+    const monthlyRecords = validRecords.filter(r => isWithinInterval(parseISO(r.fecha), { start: monthStart, end: monthEnd }));
     
     const monthlyIncome = monthlyRecords
         .filter(r => r.movimiento === 'INGRESOS')
@@ -57,7 +59,7 @@ export default function DashboardPage() {
         .filter(r => r.movimiento === 'GASTOS')
         .reduce((acc, r) => acc + r.monto, 0);
 
-    const recentRecords = [...financialRecords]
+    const recentRecords = [...validRecords]
       .sort((a, b) => parseISO(b.fecha).getTime() - parseISO(a.fecha).getTime())
       .slice(0, 5);
 
@@ -152,17 +154,20 @@ export default function DashboardPage() {
             <CardContent>
                 {recentRecords.length > 0 ? (
                     <ul className="space-y-3">
-                        {recentRecords.map((record) => (
+                        {recentRecords.map((record) => {
+                           const recordDate = parseISO(record.fecha);
+                           const formattedDate = isValid(recordDate) ? format(recordDate, 'dd MMM yyyy', { locale: es }) : 'Fecha inválida';
+                           return (
                            <li key={record.id} className="flex justify-between items-center">
                                <div>
                                    <p className="font-medium text-sm">{record.descripcion}</p>
-                                   <p className="text-xs text-muted-foreground">{format(parseISO(record.fecha), 'dd MMM yyyy', { locale: es })}</p>
+                                   <p className="text-xs text-muted-foreground">{formattedDate}</p>
                                </div>
                                <span className={cn('font-mono font-semibold text-sm', record.monto >= 0 ? 'text-green-500' : 'text-red-500')}>
                                    {formatCurrency(record.monto)}
                                </span>
                            </li>
-                        ))}
+                        )})}
                     </ul>
                 ) : (
                      <p className="text-center text-muted-foreground py-4">No hay registros recientes.</p>

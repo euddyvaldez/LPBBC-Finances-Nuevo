@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Download, Loader2, Upload, Tag, User, Calendar as CalendarIcon, Pencil, Trash2 } from 'lucide-react';
@@ -47,9 +47,10 @@ const RecordsForm = ({ record, onFinished }: { record?: FinancialRecord, onFinis
 
   useEffect(() => {
     if (record) {
+      const parsedDate = record.fecha ? parseISO(record.fecha as unknown as string) : new Date();
       form.reset({
         ...record,
-        fecha: record.fecha ? parseISO(record.fecha as unknown as string) : new Date(),
+        fecha: isValid(parsedDate) ? parsedDate : new Date(),
         monto: Math.abs(record.monto), // Always show positive amount in form
       });
     } else {
@@ -57,7 +58,7 @@ const RecordsForm = ({ record, onFinished }: { record?: FinancialRecord, onFinis
         fecha: new Date(),
         movimiento: 'INGRESOS',
         descripcion: '',
-        monto: '' as any, // Initialize with empty string
+        monto: '' as any,
         integranteId: '',
         razonId: '',
       });
@@ -247,6 +248,10 @@ const RecordCard = ({ record, getIntegranteName, getRazonDesc }: { record: Finan
         'GASTOS': 'border-l-red-500',
         'INVERSION': 'border-l-amber-500'
     };
+    
+    const recordDate = record.fecha ? parseISO(record.fecha) : null;
+    const formattedDate = recordDate && isValid(recordDate) ? format(recordDate, 'dd MMMM yyyy', { locale: es }) : 'Fecha inválida';
+
 
     return (
         <Card className={cn("mb-3 overflow-hidden", movimientoColors[record.movimiento], 'border-l-4')}>
@@ -255,7 +260,7 @@ const RecordCard = ({ record, getIntegranteName, getRazonDesc }: { record: Finan
                     <p className="font-semibold text-lg flex-1 pr-2">{record.descripcion || <span className="italic text-muted-foreground">Sin descripción</span>}</p>
                      <div className="flex items-center">
                         <EditRecordDialog record={record} />
-                        <DeleteRecordAlert recordId={record.id} recordDesc={record.descripcion || `Registro del ${record.fecha}`} />
+                        <DeleteRecordAlert recordId={record.id} recordDesc={record.descripcion || `Registro del ${formattedDate}`} />
                     </div>
                 </div>
                  <div className={cn('font-mono font-bold text-lg', record.monto >= 0 ? 'text-green-500' : 'text-red-500')}>
@@ -264,7 +269,7 @@ const RecordCard = ({ record, getIntegranteName, getRazonDesc }: { record: Finan
                 <div className="text-sm text-muted-foreground space-y-2">
                     <div className="flex items-center gap-2"><Tag className="w-4 h-4" /> <span>{getRazonDesc(record.razonId)} ({record.movimiento})</span></div>
                     <div className="flex items-center gap-2"><User className="w-4 h-4" /> <span>{getIntegranteName(record.integranteId)}</span></div>
-                    <div className="flex items-center gap-2"><CalendarIcon className="w-4 h-4" /> <span>{format(parseISO(record.fecha), 'dd MMMM yyyy', { locale: es })}</span></div>
+                    <div className="flex items-center gap-2"><CalendarIcon className="w-4 h-4" /> <span>{formattedDate}</span></div>
                 </div>
             </CardContent>
         </Card>
@@ -284,7 +289,12 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
   const getRazonDesc = (id: string) => razones.find((r) => r.id === id)?.descripcion || 'N/A';
   
   const filteredRecords = useMemo(() => {
-    const sortedRecords = [...records].sort((a, b) => parseISO(b.fecha).getTime() - parseISO(a.fecha).getTime());
+    const sortedRecords = [...records].sort((a, b) => {
+        const dateA = a.fecha ? parseISO(a.fecha).getTime() : 0;
+        const dateB = b.fecha ? parseISO(b.fecha).getTime() : 0;
+        if (!dateA || !dateB) return 0;
+        return dateB - dateA;
+    });
 
     if (!filter) return sortedRecords;
     return sortedRecords.filter((record) => {
@@ -293,7 +303,7 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
         case 'descripcion': fieldValue = record.descripcion; break;
         case 'integrante': fieldValue = getIntegranteName(record.integranteId); break;
         case 'razon': fieldValue = getRazonDesc(record.razonId); break;
-        case 'fecha': fieldValue = format(parseISO(record.fecha), 'yyyy-MM-dd'); break;
+        case 'fecha': fieldValue = record.fecha; break;
         default: fieldValue = record.descripcion;
       }
       return fieldValue.toLowerCase().includes(filter.toLowerCase());
@@ -458,24 +468,28 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
                         </TableHeader>
                         <TableBody>
                         {filteredRecords.length > 0 ? (
-                            filteredRecords.map((record) => (
-                            <TableRow key={record.id}>
-                                <TableCell className="whitespace-nowrap">{format(parseISO(record.fecha), 'dd MMM yyyy', { locale: es })}</TableCell>
-                                <TableCell>{getIntegranteName(record.integranteId)}</TableCell>
-                                <TableCell>{record.movimiento}</TableCell>
-                                <TableCell>{getRazonDesc(record.razonId)}</TableCell>
-                                <TableCell>{record.descripcion || '-'}</TableCell>
-                                <TableCell className={cn('text-right font-mono', record.monto >= 0 ? 'text-green-500' : 'text-red-500')}>
-                                {record.monto.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                    <div className="flex justify-end items-center">
-                                        <EditRecordDialog record={record} />
-                                        <DeleteRecordAlert recordId={record.id} recordDesc={record.descripcion || `Registro del ${record.fecha}`} />
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                            ))
+                            filteredRecords.map((record) => {
+                                const recordDate = record.fecha ? parseISO(record.fecha) : null;
+                                const formattedDate = recordDate && isValid(recordDate) ? format(recordDate, 'dd MMM yyyy', { locale: es }) : 'Fecha inválida';
+                                return (
+                                <TableRow key={record.id}>
+                                    <TableCell className="whitespace-nowrap">{formattedDate}</TableCell>
+                                    <TableCell>{getIntegranteName(record.integranteId)}</TableCell>
+                                    <TableCell>{record.movimiento}</TableCell>
+                                    <TableCell>{getRazonDesc(record.razonId)}</TableCell>
+                                    <TableCell>{record.descripcion || '-'}</TableCell>
+                                    <TableCell className={cn('text-right font-mono', record.monto >= 0 ? 'text-green-500' : 'text-red-500')}>
+                                    {record.monto.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}
+                                    </TableCell>
+                                    <TableCell className="text-right">
+                                        <div className="flex justify-end items-center">
+                                            <EditRecordDialog record={record} />
+                                            <DeleteRecordAlert recordId={record.id} recordDesc={record.descripcion || `Registro del ${formattedDate}`} />
+                                        </div>
+                                    </TableCell>
+                                </TableRow>
+                                );
+                            })
                         ) : (
                             <TableRow><TableCell colSpan={7} className="text-center">No hay registros que mostrar.</TableCell></TableRow>
                         )}
