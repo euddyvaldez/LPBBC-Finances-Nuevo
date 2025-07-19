@@ -57,7 +57,7 @@ const RecordsForm = ({ record, onFinished }: { record?: FinancialRecord, onFinis
         fecha: new Date(),
         movimiento: 'INGRESOS',
         descripcion: '',
-        monto: undefined,
+        monto: '' as any, // Initialize with empty string
         integranteId: '',
         razonId: '',
       });
@@ -83,7 +83,7 @@ const RecordsForm = ({ record, onFinished }: { record?: FinancialRecord, onFinis
             ...form.getValues(),
             integranteId: '',
             razonId: '',
-            monto: undefined,
+            monto: '' as any,
             descripcion: ''
         });
       }
@@ -156,7 +156,7 @@ const RecordsForm = ({ record, onFinished }: { record?: FinancialRecord, onFinis
                   </FormItem>)} />
 
                 <FormField control={form.control} name="monto" render={({ field }) => (
-                    <FormItem><FormLabel>Monto</FormLabel><FormControl><Input type="number" placeholder="0.00" {...field} /></FormControl><FormMessage /></FormItem>)} />
+                    <FormItem><FormLabel>Monto</FormLabel><FormControl><Input type="number" placeholder="0.00" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)} />
                 
                 <FormField
                   control={form.control}
