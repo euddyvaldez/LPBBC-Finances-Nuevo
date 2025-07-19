@@ -46,6 +46,9 @@ export default function FinancialPanelPage() {
     let recordsToFilter = financialRecords.filter(r => r.fecha && isValid(parseDate(r.fecha)));
 
     if (filterMode === 'predefined') {
+      if (viewType === 'yearly') {
+        return recordsToFilter;
+      }
       const year = parseInt(selectedYear);
       if (viewType === 'monthly') {
         const startDate = startOfYear(new Date(year, 0, 1));
@@ -62,16 +65,18 @@ export default function FinancialPanelPage() {
           const recordDate = parseDate(r.fecha);
           return recordDate >= startDate && recordDate <= endDate;
         });
-      } else { // yearly summary
-        return recordsToFilter;
       }
     } else { // custom range
       if (!customStartDate || !customEndDate) return [];
+      const rangeStart = customStartDate ? startOfMonth(customStartDate) : null;
+      const rangeEnd = customEndDate ? endOfMonth(customEndDate) : null;
+      if(!rangeStart || !rangeEnd) return [];
       return recordsToFilter.filter(r => {
         const recordDate = parseDate(r.fecha);
-        return recordDate >= customStartDate && recordDate <= customEndDate;
+        return recordDate >= rangeStart && recordDate <= rangeEnd;
       });
     }
+    return [];
   }, [financialRecords, filterMode, viewType, selectedYear, selectedMonth, customStartDate, customEndDate]);
 
   const summary = useMemo(() => {
@@ -121,7 +126,8 @@ export default function FinancialPanelPage() {
       const keyDate = parse(key, (viewType === 'daily' || filterMode === 'custom') ? 'yyyy-MM-dd' : (viewType === 'monthly' ? 'yyyy-MM' : 'yyyy'), new Date());
       if(isValid(keyDate)) {
         if (viewType === 'daily') label = format(keyDate, 'd MMM', { locale: es });
-        if (viewType === 'monthly') label = format(keyDate, 'MMM', { locale: es });
+        if (viewType === 'monthly') label = format(keyDate, 'MMM yyyy', { locale: es });
+        if (viewType === 'yearly') label = format(keyDate, 'yyyy', { locale: es });
       }
       return { name: label, ...value };
     });
@@ -159,7 +165,7 @@ export default function FinancialPanelPage() {
                   <SelectContent>
                     <SelectItem value="monthly">Tendencia Mensual</SelectItem>
                     <SelectItem value="daily">Tendencia Diaria</SelectItem>
-                    <SelectItem value="yearly">Resumen Anual</SelectItem>
+                    <SelectItem value="yearly">Historial Completo</SelectItem>
                   </SelectContent>
                 </Select>
                 {viewType !== 'yearly' && (
