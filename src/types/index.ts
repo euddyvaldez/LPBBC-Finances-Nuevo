@@ -17,7 +17,7 @@ export interface Integrante {
 export interface FinancialRecord {
   id: string;
   userId: string;
-  fecha: string; // 'YYYY-MM-DD'
+  fecha: string; // 'dd/MM/yyyy'
   integranteId: string;
   razonId: string;
   movimiento: Movimiento;

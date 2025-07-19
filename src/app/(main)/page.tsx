@@ -10,8 +10,10 @@ import { cn } from '@/lib/utils';
 import { getCitas } from '@/lib/data';
 import type { Cita, FinancialRecord } from '@/types';
 import Link from 'next/link';
-import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, isValid } from 'date-fns';
+import { format, startOfMonth, endOfMonth, isWithinInterval, parse, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
+
+const parseDate = (dateStr: string) => parse(dateStr, 'dd/MM/yyyy', new Date());
 
 export default function DashboardPage() {
   const { financialRecords, loading } = useAppContext();
@@ -41,7 +43,7 @@ export default function DashboardPage() {
   }, [citas.length]);
 
   const { balance, monthlyIncome, monthlyExpenses, recentRecords } = useMemo(() => {
-    const validRecords = financialRecords.filter(r => r.fecha && isValid(parseISO(r.fecha)));
+    const validRecords = financialRecords.filter(r => r.fecha && isValid(parseDate(r.fecha)));
 
     const balance = validRecords.reduce((acc, record) => acc + record.monto, 0);
     
@@ -49,7 +51,7 @@ export default function DashboardPage() {
     const monthStart = startOfMonth(now);
     const monthEnd = endOfMonth(now);
 
-    const monthlyRecords = validRecords.filter(r => isWithinInterval(parseISO(r.fecha), { start: monthStart, end: monthEnd }));
+    const monthlyRecords = validRecords.filter(r => isWithinInterval(parseDate(r.fecha), { start: monthStart, end: monthEnd }));
     
     const monthlyIncome = monthlyRecords
         .filter(r => r.movimiento === 'INGRESOS')
@@ -60,7 +62,7 @@ export default function DashboardPage() {
         .reduce((acc, r) => acc + r.monto, 0);
 
     const recentRecords = [...validRecords]
-      .sort((a, b) => parseISO(b.fecha).getTime() - parseISO(a.fecha).getTime())
+      .sort((a, b) => parseDate(b.fecha).getTime() - parseDate(a.fecha).getTime())
       .slice(0, 5);
 
     return { balance, monthlyIncome, monthlyExpenses, recentRecords };
@@ -155,7 +157,7 @@ export default function DashboardPage() {
                 {recentRecords.length > 0 ? (
                     <ul className="space-y-3">
                         {recentRecords.map((record) => {
-                           const recordDate = parseISO(record.fecha);
+                           const recordDate = parseDate(record.fecha);
                            const formattedDate = isValid(recordDate) ? format(recordDate, 'dd MMM yyyy', { locale: es }) : 'Fecha inválida';
                            return (
                            <li key={record.id} className="flex justify-between items-center">

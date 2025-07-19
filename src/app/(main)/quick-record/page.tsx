@@ -91,7 +91,7 @@ export default function QuickRecordPage() {
       const razonDesc = razones.find((r) => r.id === values.razonId)?.descripcion || '';
       await addFinancialRecord({
         ...values,
-        fecha: format(values.fecha, 'yyyy-MM-dd'),
+        fecha: format(values.fecha, 'dd/MM/yyyy'),
         descripcion: values.descripcion || razonDesc,
       });
       toast({

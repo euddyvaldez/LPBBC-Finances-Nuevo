@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { format, parseISO, isValid } from 'date-fns';
+import { format, parse, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { Download, Loader2, Upload, Tag, User, Calendar as CalendarIcon, Pencil, Trash2 } from 'lucide-react';
@@ -36,6 +36,8 @@ const recordSchema = z.object({
 
 type RecordFormData = z.infer<typeof recordSchema>;
 
+const parseDate = (dateStr: string) => parse(dateStr, 'dd/MM/yyyy', new Date());
+
 const RecordsForm = ({ record, onFinished }: { record?: FinancialRecord, onFinished?: () => void }) => {
   const { razones, integrantes, addFinancialRecord, updateFinancialRecord, financialRecords } = useAppContext();
   const { toast } = useToast();
@@ -47,7 +49,7 @@ const RecordsForm = ({ record, onFinished }: { record?: FinancialRecord, onFinis
 
   useEffect(() => {
     if (record) {
-      const parsedDate = record.fecha ? parseISO(record.fecha as unknown as string) : new Date();
+      const parsedDate = record.fecha ? parseDate(record.fecha) : new Date();
       form.reset({
         ...record,
         fecha: isValid(parsedDate) ? parsedDate : new Date(),
@@ -70,7 +72,7 @@ const RecordsForm = ({ record, onFinished }: { record?: FinancialRecord, onFinis
     try {
       const recordData = {
         ...values,
-        fecha: format(values.fecha, 'yyyy-MM-dd'),
+        fecha: format(values.fecha, 'dd/MM/yyyy'),
         descripcion: values.descripcion || '',
       };
       
@@ -249,7 +251,7 @@ const RecordCard = ({ record, getIntegranteName, getRazonDesc }: { record: Finan
         'INVERSION': 'border-l-amber-500'
     };
     
-    const recordDate = record.fecha ? parseISO(record.fecha) : null;
+    const recordDate = record.fecha ? parseDate(record.fecha) : null;
     const formattedDate = recordDate && isValid(recordDate) ? format(recordDate, 'dd MMMM yyyy', { locale: es }) : 'Fecha inválida';
 
 
@@ -290,9 +292,9 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
   
   const filteredRecords = useMemo(() => {
     const sortedRecords = [...records].sort((a, b) => {
-        const dateA = a.fecha ? parseISO(a.fecha).getTime() : 0;
-        const dateB = b.fecha ? parseISO(b.fecha).getTime() : 0;
-        if (!dateA || !dateB) return 0;
+        const dateA = a.fecha ? parseDate(a.fecha).getTime() : 0;
+        const dateB = b.fecha ? parseDate(b.fecha).getTime() : 0;
+        if (!isValid(dateA) || !isValid(dateB)) return 0;
         return dateB - dateA;
     });
 
@@ -428,7 +430,7 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
                 <SelectItem value="descripcion">Descripción</SelectItem>
                 <SelectItem value="integrante">Integrante</SelectItem>
                 <SelectItem value="razon">Razón</SelectItem>
-                <SelectItem value="fecha">Fecha (YYYY-MM-DD)</SelectItem>
+                <SelectItem value="fecha">Fecha (dd/MM/yyyy)</SelectItem>
               </SelectContent>
             </Select>
             <Input placeholder="Buscar..." value={filter} onChange={(e) => setFilter(e.target.value)} className="flex-1"/>
@@ -469,7 +471,7 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
                         <TableBody>
                         {filteredRecords.length > 0 ? (
                             filteredRecords.map((record) => {
-                                const recordDate = record.fecha ? parseISO(record.fecha) : null;
+                                const recordDate = record.fecha ? parseDate(record.fecha) : null;
                                 const formattedDate = recordDate && isValid(recordDate) ? format(recordDate, 'dd MMM yyyy', { locale: es }) : 'Fecha inválida';
                                 return (
                                 <TableRow key={record.id}>
