@@ -65,7 +65,7 @@ export default function QuickRecordPage() {
     resolver: zodResolver(quickRecordSchema),
     defaultValues: {
       fecha: new Date(),
-      monto: 100,
+      monto: undefined,
       movimiento: 'INGRESOS',
       razonId: '',
       integranteId: '',
@@ -102,7 +102,7 @@ export default function QuickRecordPage() {
         ...form.getValues(),
         razonId: '',
         integranteId: '',
-        monto: 100,
+        monto: undefined,
         movimiento: 'INGRESOS',
         descripcion: '',
       });
@@ -213,7 +213,7 @@ export default function QuickRecordPage() {
                   <FormItem>
                     <FormLabel>Monto</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="100" {...field} />
+                      <Input type="number" placeholder="0.00" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

@@ -67,7 +67,8 @@ export default function MembersPage() {
       toast({ title: 'Éxito', description: 'Integrante actualizado.' });
       handleCancelEdit();
     } catch (error) {
-      toast({ variant: 'destructive', title: 'Error', description: 'No se pudo actualizar el integrante.' });
+      const message = error instanceof Error ? error.message : 'No se pudo actualizar el integrante.';
+      toast({ variant: 'destructive', title: 'Error', description: message });
     }
   };
 
@@ -81,7 +82,8 @@ export default function MembersPage() {
         await deleteIntegrante(id);
         toast({ title: 'Éxito', description: 'Integrante eliminado.' });
     } catch (error) {
-        toast({ variant: 'destructive', title: 'Error', description: 'No se pudo eliminar el integrante.' });
+       const message = error instanceof Error ? error.message : 'No se pudo eliminar el integrante.';
+       toast({ variant: 'destructive', title: 'Error', description: message });
     }
   };
 
@@ -126,8 +128,9 @@ export default function MembersPage() {
       }
       try {
         const lines = text.split(/\r?\n/).filter(line => line.trim() !== '');
-        const headers = lines[0].split(',').map(h => h.trim());
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
         const nombreIndex = headers.indexOf('nombre');
+        const isProtectedIndex = headers.indexOf('isprotected');
 
         if (nombreIndex === -1) {
           throw new Error('La columna "nombre" no fue encontrada en el CSV.');
@@ -141,18 +144,23 @@ export default function MembersPage() {
           const nombre = values[nombreIndex]?.replace(/"/g, '').trim();
 
           if (nombre) {
-            const isProtected = values[headers.indexOf('isProtected')]?.trim().toLowerCase() === 'true';
-            if (mode === 'add' && !existingNames.has(nombre.toLowerCase())) {
-                newIntegrantes.push({ nombre, isProtected });
-            } else if (mode === 'replace') {
-                newIntegrantes.push({ nombre, isProtected });
+            const isProtected = isProtectedIndex !== -1 ? values[isProtectedIndex]?.trim().toLowerCase() === 'true' : false;
+            
+            const item = { nombre, isProtected };
+            
+            if(mode === 'add') {
+                if (!existingNames.has(nombre.toLowerCase())) {
+                    newIntegrantes.push(item);
+                }
+            } else { // replace mode
+                newIntegrantes.push(item);
             }
           }
         }
         
         if (newIntegrantes.length > 0) {
           await importIntegrantes(newIntegrantes, mode);
-          toast({ title: 'Éxito', description: `${newIntegrantes.length} integrantes importados en modo "${mode}".` });
+          toast({ title: 'Éxito', description: `Importación completa. ${newIntegrantes.length} registros afectados.` });
         } else {
           toast({ title: 'Información', description: 'No se encontraron nuevos integrantes para importar o no hay cambios.' });
         }

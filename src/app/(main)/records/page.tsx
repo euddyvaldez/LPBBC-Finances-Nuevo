@@ -50,6 +50,7 @@ const RecordsForm = ({ record, onFinished }: { record?: FinancialRecord, onFinis
       form.reset({
         ...record,
         fecha: record.fecha ? parseISO(record.fecha as unknown as string) : new Date(),
+        monto: Math.abs(record.monto), // Always show positive amount in form
       });
     } else {
        form.reset({
@@ -465,7 +466,7 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
                                 <TableCell>{getRazonDesc(record.razonId)}</TableCell>
                                 <TableCell>{record.descripcion || '-'}</TableCell>
                                 <TableCell className={cn('text-right font-mono', record.monto >= 0 ? 'text-green-500' : 'text-red-500')}>
-                                {record.monto.toFixed(2)}
+                                {record.monto.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}
                                 </TableCell>
                                 <TableCell className="text-right">
                                     <div className="flex justify-end items-center">
