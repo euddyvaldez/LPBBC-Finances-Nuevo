@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { getCitas } from '@/lib/data';
 import type { Cita, FinancialRecord } from '@/types';
 import Link from 'next/link';
-import { format, startOfMonth, endOfMonth, isWithinInterval, parse, isValid } from 'date-fns';
+import { format, startOfMonth, endOfMonth, isWithinInterval, parse, isValid, getDaysInMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 const parseDate = (dateStr: string) => parse(dateStr, 'dd/MM/yyyy', new Date());
@@ -42,7 +42,7 @@ export default function DashboardPage() {
     return () => clearInterval(timer);
   }, [citas.length]);
 
-  const { balance, monthlyIncome, monthlyExpenses, recentRecords } = useMemo(() => {
+  const { balance, monthlyIncome, monthlyExpenses, recentRecords, dailyAverageIncome, dailyAverageExpenses } = useMemo(() => {
     const validRecords = financialRecords.filter(r => r.fecha && isValid(parseDate(r.fecha)));
 
     const balance = validRecords.reduce((acc, record) => acc + record.monto, 0);
@@ -50,6 +50,7 @@ export default function DashboardPage() {
     const now = new Date();
     const monthStart = startOfMonth(now);
     const monthEnd = endOfMonth(now);
+    const daysInMonth = getDaysInMonth(now);
 
     const monthlyRecords = validRecords.filter(r => isWithinInterval(parseDate(r.fecha), { start: monthStart, end: monthEnd }));
     
@@ -65,7 +66,10 @@ export default function DashboardPage() {
       .sort((a, b) => parseDate(b.fecha).getTime() - parseDate(a.fecha).getTime())
       .slice(0, 5);
 
-    return { balance, monthlyIncome, monthlyExpenses, recentRecords };
+    const dailyAverageIncome = daysInMonth > 0 ? monthlyIncome / daysInMonth : 0;
+    const dailyAverageExpenses = daysInMonth > 0 ? monthlyExpenses / daysInMonth : 0;
+
+    return { balance, monthlyIncome, monthlyExpenses, recentRecords, dailyAverageIncome, dailyAverageExpenses };
   }, [financialRecords]);
 
   const formatCurrency = (amount: number) => {
@@ -143,6 +147,14 @@ export default function DashboardPage() {
                  <div className="flex justify-between items-center">
                     <span className="text-muted-foreground">Gastos</span>
                     <span className="font-bold text-red-500">{formatCurrency(monthlyExpenses)}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs pt-2 border-t mt-2">
+                    <span className="text-muted-foreground">Prom. Ingreso Diario</span>
+                    <span className="font-medium text-green-500/80">{formatCurrency(dailyAverageIncome)}</span>
+                </div>
+                 <div className="flex justify-between items-center text-xs">
+                    <span className="text-muted-foreground">Prom. Gasto Diario</span>
+                    <span className="font-medium text-red-500/80">{formatCurrency(dailyAverageExpenses)}</span>
                 </div>
             </CardContent>
         </Card>
