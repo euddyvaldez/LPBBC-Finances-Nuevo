@@ -272,6 +272,7 @@ const RecordCard = ({ record, getIntegranteName, getRazonDesc }: { record: Finan
     
     const recordDate = record.fecha ? parseDate(record.fecha) : null;
     const formattedDate = recordDate && isValid(recordDate) ? format(recordDate, 'dd MMMM yyyy', { locale: es }) : 'Fecha inválida';
+    const monto = typeof record.monto === 'number' ? record.monto : 0;
 
 
     return (
@@ -284,8 +285,8 @@ const RecordCard = ({ record, getIntegranteName, getRazonDesc }: { record: Finan
                         <DeleteRecordAlert recordId={record.id} recordDesc={record.descripcion || `Registro del ${formattedDate}`} />
                     </div>
                 </div>
-                 <div className={cn('font-mono font-bold text-lg', record.monto >= 0 ? 'text-green-500' : 'text-red-500')}>
-                    {record.monto.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}
+                 <div className={cn('font-mono font-bold text-lg', monto >= 0 ? 'text-green-500' : 'text-red-500')}>
+                    {monto.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}
                 </div>
                 <div className="text-sm text-muted-foreground space-y-2">
                     <div className="flex items-center gap-2"><Tag className="w-4 h-4" /> <span>{getRazonDesc(record.razonId)} ({record.movimiento})</span></div>
@@ -532,6 +533,7 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
                             paginatedRecords.map((record) => {
                                 const recordDate = record.fecha ? parseDate(record.fecha) : null;
                                 const formattedDate = recordDate && isValid(recordDate) ? format(recordDate, 'dd MMM yyyy', { locale: es }) : 'Fecha inválida';
+                                const monto = typeof record.monto === 'number' ? record.monto : 0;
                                 return (
                                 <TableRow key={record.id}>
                                     <TableCell className="whitespace-nowrap">{formattedDate}</TableCell>
@@ -539,8 +541,8 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
                                     <TableCell>{record.movimiento}</TableCell>
                                     <TableCell>{getRazonDesc(record.razonId)}</TableCell>
                                     <TableCell>{record.descripcion || '-'}</TableCell>
-                                    <TableCell className={cn('text-right font-mono', record.monto >= 0 ? 'text-green-500' : 'text-red-500')}>
-                                    {record.monto.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}
+                                    <TableCell className={cn('text-right font-mono', monto >= 0 ? 'text-green-500' : 'text-red-500')}>
+                                    {monto.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' })}
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <div className="flex justify-end items-center">
@@ -599,3 +601,4 @@ export default function RecordsPage() {
         </div>
     );
 }
+
