@@ -27,7 +27,7 @@ const parseDate = (dateStr: string) => parse(dateStr, 'dd/MM/yyyy', new Date());
 export default function FinancialPanelPage() {
   const { financialRecords, loading } = useAppContext();
   const [filterMode, setFilterMode] = useState<FilterMode>('predefined');
-  const [viewType, setViewType] = useState<ViewType>('monthly');
+  const [viewType, setViewType] = useState<ViewType>('yearly');
   const [customViewType, setCustomViewType] = useState<ViewType>('daily');
   const [chartType, setChartType] = useState<ChartType>('bar');
   
@@ -233,9 +233,9 @@ export default function FinancialPanelPage() {
                     <Select value={viewType} onValueChange={(v) => setViewType(v as ViewType)}>
                     <SelectTrigger className="w-full sm:w-[180px]"><SelectValue /></SelectTrigger>
                     <SelectContent>
+                        <SelectItem value="yearly">Historial Completo</SelectItem>
                         <SelectItem value="monthly">Tendencia Mensual</SelectItem>
                         <SelectItem value="daily">Tendencia Diaria</SelectItem>
-                        <SelectItem value="yearly">Historial Completo</SelectItem>
                     </SelectContent>
                     </Select>
                     {viewType !== 'yearly' && (
