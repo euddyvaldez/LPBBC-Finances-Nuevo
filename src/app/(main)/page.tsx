@@ -4,7 +4,7 @@
 import { useAppContext } from '@/contexts/AppProvider';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Eye, EyeOff, Loader2, ArrowRight, Zap, PieChart, Users, BookCopy, BarChart3 } from 'lucide-react';
+import { Eye, EyeOff, Loader2, ArrowRight, Zap, PieChart, Users, BookCopy, BarChart3, Repeat } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { getCitas } from '@/lib/data';
@@ -51,7 +51,8 @@ export default function DashboardPage() {
     dailyAverageExpenses,
     uniqueIntegrantesCount,
     monthlyRecordsCount,
-    averageDailyMembers
+    averageDailyMembers,
+    averageDailyRecords
   } = useMemo(() => {
     const validRecords = financialRecords.filter(r => r.fecha && isValid(parseDate(r.fecha)));
 
@@ -83,7 +84,10 @@ export default function DashboardPage() {
     const dailyAverageIncome = numberOfActiveDays > 0 ? monthlyIncome / numberOfActiveDays : 0;
     const dailyAverageExpenses = numberOfActiveDays > 0 ? Math.abs(monthlyExpenses) / numberOfActiveDays : 0;
     
-    // --- New logic for averageDailyMembers on Thursdays ---
+    const monthlyRecordsCount = monthlyRecords.length;
+    const averageDailyRecords = numberOfActiveDays > 0 ? monthlyRecordsCount / numberOfActiveDays : 0;
+    
+    // --- Logic for averageDailyMembers on Thursdays ---
     // Note: getDay() returns 0 for Sunday, 1 for Monday, ..., 4 for Thursday
     const thursdayRecords = monthlyRecords.filter(r => getDay(parseDate(r.fecha)) === 4);
     
@@ -109,7 +113,8 @@ export default function DashboardPage() {
         dailyAverageExpenses,
         uniqueIntegrantesCount: uniqueIntegrantesInMonth.size,
         monthlyRecordsCount: monthlyRecords.length,
-        averageDailyMembers
+        averageDailyMembers,
+        averageDailyRecords
     };
   }, [financialRecords]);
 
@@ -204,6 +209,10 @@ export default function DashboardPage() {
                 <div className="flex justify-between items-center text-xs">
                     <span className="flex items-center gap-1 text-muted-foreground"><Users className="h-3 w-3" /> Integrantes Activos</span>
                     <span className="font-medium">{uniqueIntegrantesCount}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                    <span className="flex items-center gap-1 text-muted-foreground"><Repeat className="h-3 w-3" /> Prom. Registros/Día</span>
+                    <span className="font-medium">{averageDailyRecords.toFixed(2)}</span>
                 </div>
                  <div className="flex justify-between items-center text-xs">
                     <span className="flex items-center gap-1 text-muted-foreground"><BarChart3 className="h-3 w-3" /> Prom. Integrantes/Día</span>
