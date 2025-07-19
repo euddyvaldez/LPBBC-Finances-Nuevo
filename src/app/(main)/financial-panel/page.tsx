@@ -110,8 +110,8 @@ export default function FinancialPanelPage() {
       (acc, record) => {
         const monto = typeof record.monto === 'number' ? record.monto : 0;
         if (record.movimiento === 'INGRESOS') acc.ingresos += monto;
-        if (record.movimiento === 'GASTOS') acc.gastos += monto;
-        if (record.movimiento === 'INVERSION') acc.inversion += monto;
+        if (record.movimiento === 'GASTOS') acc.gastos += monto; // Stays negative for balance
+        if (record.movimiento === 'INVERSION') acc.inversion += monto; // Stays negative for balance
         return acc;
       },
       { ingresos: 0, gastos: 0, inversion: 0 }
@@ -171,7 +171,12 @@ export default function FinancialPanelPage() {
   }, [filteredRecords, viewType, filterMode, customViewType]);
 
 
-  const formatCurrency = (amount: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
+  const formatCurrency = (amount: number) => {
+    if (isNaN(amount)) {
+        return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(0);
+    }
+    return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
+  }
 
   return (
     <div className="space-y-6">
@@ -277,5 +282,3 @@ const SummaryCard = ({ title, value, color }: { title: string; value: string; co
     </CardContent>
   </Card>
 );
-
-    
