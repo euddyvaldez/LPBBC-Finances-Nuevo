@@ -42,7 +42,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setIntegrantes([]);
       setRazones([]);
       setFinancialRecords([]);
-      setLoading(false);
+      setLoading(false); // Asegurarse de que el estado de carga termine si no hay usuario.
       return;
     };
 
@@ -51,9 +51,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const createQuery = (collectionName: string) => query(collection(db, collectionName), where("userId", "==", user.uid));
     
     // This will only create them if they don't exist for the user.
-    api.addIntegrante("INVITADO", true, user.uid);
-    api.addRazon("MENSUALIDAD", true, user.uid);
-    api.addRazon("SEMANAL", true, user.uid);
+    if (isFirebaseConfigured && db) {
+        api.addIntegrante("INVITADO", true, user.uid);
+        api.addRazon("MENSUALIDAD", true, user.uid);
+        api.addRazon("SEMANAL", true, user.uid);
+    }
 
 
     const unsubscribers = [
