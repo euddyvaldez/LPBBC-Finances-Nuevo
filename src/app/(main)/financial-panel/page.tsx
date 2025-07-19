@@ -82,9 +82,10 @@ export default function FinancialPanelPage() {
   const summary = useMemo(() => {
     return filteredRecords.reduce(
       (acc, record) => {
-        if (record.movimiento === 'INGRESOS') acc.ingresos += record.monto;
-        if (record.movimiento === 'GASTOS') acc.gastos += record.monto;
-        if (record.movimiento === 'INVERSION') acc.inversion += record.monto;
+        const monto = typeof record.monto === 'number' ? record.monto : 0;
+        if (record.movimiento === 'INGRESOS') acc.ingresos += monto;
+        if (record.movimiento === 'GASTOS') acc.gastos += monto;
+        if (record.movimiento === 'INVERSION') acc.inversion += monto;
         return acc;
       },
       { ingresos: 0, gastos: 0, inversion: 0 }
@@ -114,9 +115,10 @@ export default function FinancialPanelPage() {
       }
       
       const entry = dataMap.get(key)!;
-      if (record.movimiento === 'INGRESOS') entry.ingresos += record.monto;
-      if (record.movimiento === 'GASTOS') entry.gastos += Math.abs(record.monto);
-      if (record.movimiento === 'INVERSION') entry.inversion += Math.abs(record.monto);
+      const monto = typeof record.monto === 'number' ? record.monto : 0;
+      if (record.movimiento === 'INGRESOS') entry.ingresos += monto;
+      if (record.movimiento === 'GASTOS') entry.gastos += Math.abs(monto);
+      if (record.movimiento === 'INVERSION') entry.inversion += Math.abs(monto);
     });
     
     const sortedEntries = Array.from(dataMap.entries()).sort(([keyA], [keyB]) => keyA.localeCompare(keyB));
@@ -125,8 +127,8 @@ export default function FinancialPanelPage() {
       let label = key;
       const keyDate = parse(key, (viewType === 'daily' || filterMode === 'custom') ? 'yyyy-MM-dd' : (viewType === 'monthly' ? 'yyyy-MM' : 'yyyy'), new Date());
       if(isValid(keyDate)) {
-        if (viewType === 'daily') label = format(keyDate, 'd MMM', { locale: es });
-        if (viewType === 'monthly') label = format(keyDate, 'MMM yyyy', { locale: es });
+        if (viewType === 'daily' || (filterMode === 'custom' && viewType !== 'monthly')) label = format(keyDate, 'd MMM', { locale: es });
+        if (viewType === 'monthly' || (filterMode === 'custom' && viewType === 'monthly')) label = format(keyDate, 'MMM yyyy', { locale: es });
         if (viewType === 'yearly') label = format(keyDate, 'yyyy', { locale: es });
       }
       return { name: label, ...value };
