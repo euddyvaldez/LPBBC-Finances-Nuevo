@@ -1,33 +1,34 @@
 
 // Import the functions you need from the SDKs you need
-import { initializeApp, getApps } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
-import { getAuth } from "firebase/auth";
+import { initializeApp, getApps, getApp, type FirebaseApp } from "firebase/app";
+import { getFirestore, type Firestore } from "firebase/firestore";
+import { getAuth, type Auth } from "firebase/auth";
 
-// TODO: Add your own Firebase configuration from your project settings.
-// https://firebase.google.com/docs/web/setup#available-libraries
+// Your web app's Firebase configuration from .env.local
 const firebaseConfig = {
-  apiKey: "REPLACE_WITH_YOUR_API_KEY",
-  authDomain: "REPLACE_WITH_YOUR_AUTH_DOMAIN",
-  projectId: "REPLACE_WITH_YOUR_PROJECT_ID",
-  storageBucket: "REPLACE_WITH_YOUR_STORAGE_BUCKET",
-  messagingSenderId: "REPLACE_WITH_YOUR_MESSAGING_SENDER_ID",
-  appId: "REPLACE_WITH_YOUR_APP_ID"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
-// Initialize Firebase
-let app;
-if (!getApps().length) {
-  app = initializeApp(firebaseConfig);
+// Check if the firebase config has been filled out
+export const isFirebaseConfigured = !!firebaseConfig.apiKey && firebaseConfig.apiKey !== 'REPLACE_WITH_YOUR_API_KEY';
+
+let app: FirebaseApp;
+let db: Firestore;
+let auth: Auth;
+
+if (isFirebaseConfigured) {
+    app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+    db = getFirestore(app);
+    auth = getAuth(app);
 } else {
-  app = getApps()[0];
+    // If not configured, we cannot use firebase services. 
+    // The rest of the code will check `isFirebaseConfigured` before making calls.
 }
 
-const db = getFirestore(app);
-const auth = getAuth(app);
 
-// Check if the firebase config is still using placeholder values
-const isFirebaseConfigured = firebaseConfig.apiKey !== "REPLACE_WITH_YOUR_API_KEY";
-
-
-export { db, auth, isFirebaseConfigured };
+export { db, auth };

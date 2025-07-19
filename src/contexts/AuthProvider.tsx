@@ -29,11 +29,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!isFirebaseConfigured) {
-      setError('Error de configuración: La clave de API de Firebase no es válida. Revisa tu archivo de configuración en src/lib/firebase.ts.');
+      setError('Error de configuración: La clave de API de Firebase no es válida. Revisa tu archivo de configuración .env.local');
       setLoading(false);
-      if (!publicRoutes.includes(pathname)) {
-        router.push('/login');
-      }
       return;
     }
 
@@ -68,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       router.push('/');
     } catch (e: any) {
       handleAuthError(e);
+      throw e;
     }
   };
 
@@ -85,6 +83,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       router.push('/');
     } catch (e: any) {
       handleAuthError(e);
+      throw e;
     }
   };
 
@@ -106,10 +105,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     switch (e.code) {
       case 'auth/api-key-not-valid':
       case 'auth/invalid-api-key':
-        setError('Error de configuración: La clave de API de Firebase no es válida. Revisa tu archivo de configuración en src/lib/firebase.ts.');
+        setError('Error de configuración: La clave de API de Firebase no es válida. Revisa tu archivo .env.local.');
         break;
       case 'auth/user-not-found':
       case 'auth/wrong-password':
+      case 'auth/invalid-credential':
         setError('Email o contraseña incorrectos.');
         break;
       case 'auth/email-already-in-use':

@@ -39,7 +39,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!user || !isFirebaseConfigured) {
-      // If no user or firebase is not configured, clear data and stop loading.
       setIntegrantes([]);
       setRazones([]);
       setFinancialRecords([]);
@@ -51,8 +50,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     const createQuery = (collectionName: string) => query(collection(db, collectionName), where("userId", "==", user.uid));
     
-    // Seed protected data for the user upon login if they don't exist.
-    // This is "fire and forget" and will only create them if they don't exist.
+    // This will only create them if they don't exist for the user.
     api.addIntegrante("INVITADO", true, user.uid);
     api.addRazon("MENSUALIDAD", true, user.uid);
     api.addRazon("SEMANAL", true, user.uid);

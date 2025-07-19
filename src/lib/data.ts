@@ -3,11 +3,7 @@ import { collection, getDocs, addDoc, doc, updateDoc, deleteDoc, writeBatch, que
 import { db } from './firebase';
 import type { FinancialRecord, Integrante, Razon, Cita, Movimiento } from '@/types';
 
-// Collection references
-const integrantesCol = collection(db, 'integrantes');
-const razonesCol = collection(db, 'razones');
-const financialRecordsCol = collection(db, 'financialRecords');
-
+// Citas (Static Data)
 const CitasData: Cita[] = [
     { texto: "Cuida de los pequeños gastos; un pequeño agujero hunde un barco.", autor: "Benjamin Franklin" },
     { texto: "La inversión en conocimiento paga el mejor interés.", autor: "Benjamin Franklin" },
@@ -22,6 +18,7 @@ const CitasData: Cita[] = [
 export const addIntegrante = async (nombre: string, isProtected = false, userId: string): Promise<void> => {
   if (!userId) throw new Error("User ID is required");
   const upperCaseNombre = nombre.toUpperCase();
+  const integrantesCol = collection(db, 'integrantes');
   const q = query(integrantesCol, where("nombre", "==", upperCaseNombre), where("userId", "==", userId));
   const querySnapshot = await getDocs(q);
   if (querySnapshot.empty) {
@@ -31,6 +28,7 @@ export const addIntegrante = async (nombre: string, isProtected = false, userId:
 
 export const importIntegrantes = async (integrantesToImport: Omit<Integrante, 'id' | 'userId'>[], mode: 'add' | 'replace', userId: string): Promise<void> => {
   const batch = writeBatch(db);
+  const integrantesCol = collection(db, 'integrantes');
   
   if (mode === 'replace') {
     const q = query(integrantesCol, where('isProtected', '!=', true), where("userId", "==", userId));
@@ -69,6 +67,7 @@ export const deleteIntegrante = async (id: string): Promise<void> => {
 export const addRazon = async (descripcion: string, isQuickReason = false, userId: string): Promise<void> => {
     if (!userId) throw new Error("User ID is required");
     const upperCaseDesc = descripcion.toUpperCase();
+    const razonesCol = collection(db, 'razones');
     const q = query(razonesCol, where("descripcion", "==", upperCaseDesc), where("userId", "==", userId));
     const querySnapshot = await getDocs(q);
     if (querySnapshot.empty) {
@@ -78,6 +77,7 @@ export const addRazon = async (descripcion: string, isQuickReason = false, userI
 
 export const importRazones = async (razonesToImport: Omit<Razon, 'id' | 'userId'>[], mode: 'add' | 'replace', userId: string): Promise<void> => {
     const batch = writeBatch(db);
+    const razonesCol = collection(db, 'razones');
     
     if (mode === 'replace') {
         const q = query(razonesCol, where("userId", "==", userId));
@@ -118,7 +118,7 @@ export const addFinancialRecord = async (record: Omit<FinancialRecord, 'id' | 'u
   }
   
   const newRecordData = { ...record, monto, userId };
-  await addDoc(financialRecordsCol, newRecordData);
+  await addDoc(collection(db, 'financialRecords'), newRecordData);
 };
 
 export const updateFinancialRecord = async (id: string, updates: Partial<Omit<FinancialRecord, 'id' | 'userId'>>): Promise<void> => {
@@ -146,6 +146,7 @@ export const deleteFinancialRecord = async (id: string): Promise<void> => {
 
 export const importFinancialRecords = async (recordsToImport: Omit<FinancialRecord, 'id' | 'userId'>[], mode: 'add' | 'replace', userId: string): Promise<void> => {
     const batch = writeBatch(db);
+    const financialRecordsCol = collection(db, 'financialRecords');
 
     if (mode === 'replace') {
         const q = query(financialRecordsCol, where("userId", "==", userId));
