@@ -10,7 +10,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { format, parse, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
-import { Download, Loader2, Upload, Tag, User, Calendar as CalendarIcon, Pencil, Trash2 } from 'lucide-react';
+import { Download, Loader2, Upload, Tag, User, Calendar as CalendarIcon, Pencil, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -286,6 +286,8 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
   const [filterField, setFilterField] = useState('descripcion');
   const importFileInputRef = useRef<HTMLInputElement>(null);
   const [importDialog, setImportDialog] = useState<{isOpen: boolean, file: File | null}>({isOpen: false, file: null});
+  const [currentPage, setCurrentPage] = useState(1);
+  const [recordsPerPage, setRecordsPerPage] = useState(20);
 
   const getIntegranteName = (id: string) => integrantes.find((i) => i.id === id)?.nombre || 'N/A';
   const getRazonDesc = (id: string) => razones.find((r) => r.id === id)?.descripcion || 'N/A';
@@ -294,7 +296,7 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
     const sortedRecords = [...records].sort((a, b) => {
         const dateA = a.fecha ? parseDate(a.fecha).getTime() : 0;
         const dateB = b.fecha ? parseDate(b.fecha).getTime() : 0;
-        if (!isValid(dateA) || !isValid(dateB)) return 0;
+        if (isNaN(dateA) || isNaN(dateB)) return 0;
         return dateB - dateA;
     });
 
@@ -311,6 +313,17 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
       return fieldValue.toLowerCase().includes(filter.toLowerCase());
     });
   }, [filter, filterField, records, integrantes, razones]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filter, filterField, recordsPerPage]);
+
+  const paginatedRecords = useMemo(() => {
+    const startIndex = (currentPage - 1) * recordsPerPage;
+    return filteredRecords.slice(startIndex, startIndex + recordsPerPage);
+  }, [currentPage, recordsPerPage, filteredRecords]);
+
+  const totalPages = Math.ceil(filteredRecords.length / recordsPerPage);
 
   const exportToCSV = () => {
     const headers = ['fecha', 'integranteNombre', 'movimiento', 'razonDescripcion', 'descripcion', 'monto'];
@@ -444,8 +457,8 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
         <CardContent>
             {/* Mobile View: Cards */}
             <div className="md:hidden">
-              {filteredRecords.length > 0 ? (
-                  filteredRecords.map((record) => (
+              {paginatedRecords.length > 0 ? (
+                  paginatedRecords.map((record) => (
                       <RecordCard key={record.id} record={record} getIntegranteName={getIntegranteName} getRazonDesc={getRazonDesc} />
                   ))
               ) : (
@@ -469,8 +482,8 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
                         </TableRow>
                         </TableHeader>
                         <TableBody>
-                        {filteredRecords.length > 0 ? (
-                            filteredRecords.map((record) => {
+                        {paginatedRecords.length > 0 ? (
+                            paginatedRecords.map((record) => {
                                 const recordDate = record.fecha ? parseDate(record.fecha) : null;
                                 const formattedDate = recordDate && isValid(recordDate) ? format(recordDate, 'dd MMM yyyy', { locale: es }) : 'Fecha inválida';
                                 return (
@@ -497,6 +510,24 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
                         )}
                         </TableBody>
                     </Table>
+                </div>
+            </div>
+             <div className="flex items-center justify-between mt-4">
+                <div className='flex items-center gap-2'>
+                    <span className="text-sm text-muted-foreground">Filas por página</span>
+                    <Select value={String(recordsPerPage)} onValueChange={(v) => setRecordsPerPage(Number(v))}>
+                        <SelectTrigger className="w-[70px]"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                            {[10, 20, 50, 100].map(v => <SelectItem key={v} value={String(v)}>{v}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                </div>
+                <div className="flex items-center gap-4">
+                    <span className="text-sm text-muted-foreground">Página {currentPage} de {totalPages}</span>
+                    <div className='flex items-center gap-2'>
+                        <Button variant="outline" size="icon" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}><ChevronLeft /></Button>
+                        <Button variant="outline" size="icon" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}><ChevronRight /></Button>
+                    </div>
                 </div>
             </div>
         </CardContent>
@@ -539,3 +570,4 @@ export default function RecordsPage() {
         </div>
     );
 }
+
