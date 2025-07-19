@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/select';
 import { DatePicker } from '@/components/DatePicker';
 import { useAppContext } from '@/contexts/AppProvider';
-import { subMonths, format, parse, isValid } from 'date-fns';
+import { subMonths, format, parse, isValid, startOfYear, endOfYear, differenceInMonths, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { FinancialChart } from '@/components/FinancialChart';
 import type { FinancialRecord } from '@/types';
@@ -30,7 +30,17 @@ export default function FinancialPanelPage() {
   const [viewType, setViewType] = useState<ViewType>('monthly');
   const [customViewType, setCustomViewType] = useState<ViewType>('daily');
   const [chartType, setChartType] = useState<ChartType>('bar');
-  const [customStartDate, setCustomStartDate] = useState<Date | undefined>(subMonths(new Date(), 1));
+  
+  const oldestRecordDate = useMemo(() => {
+    if (financialRecords.length === 0) return new Date();
+    const dates = financialRecords
+      .map(r => r.fecha ? parseDate(r.fecha) : null)
+      .filter(d => d && isValid(d)) as Date[];
+    if (dates.length === 0) return new Date();
+    return new Date(Math.min.apply(null, dates.map(d => d.getTime())));
+  }, [financialRecords]);
+
+  const [customStartDate, setCustomStartDate] = useState<Date | undefined>(oldestRecordDate);
   const [customEndDate, setCustomEndDate] = useState<Date | undefined>(new Date());
   
   const availableYears = useMemo(() => {
@@ -49,6 +59,10 @@ export default function FinancialPanelPage() {
   useEffect(() => {
     setSelectedYear(String(availableYears[0]));
   }, [availableYears]);
+
+  useEffect(() => {
+    setCustomStartDate(oldestRecordDate);
+  }, [oldestRecordDate]);
   
   const filteredRecords = useMemo(() => {
     let recordsToFilter = financialRecords.filter(r => {
@@ -92,12 +106,9 @@ export default function FinancialPanelPage() {
       const startDate = customStartDate;
       const endDate = customEndDate;
       // Ensure start date is before end date
-      const rangeStart = startDate < endDate ? startDate : endDate;
-      const rangeEnd = startDate > endDate ? startDate : endDate;
+      const rangeStart = startOfDay(startDate < endDate ? startDate : endDate);
+      const rangeEnd = new Date(endDate.setHours(23, 59, 59, 999));
       
-      rangeStart.setHours(0, 0, 0, 0);
-      rangeEnd.setHours(23, 59, 59, 999);
-
       return recordsToFilter.filter(r => {
         const recordDate = parseDate(r.fecha);
         return recordDate >= rangeStart && recordDate <= rangeEnd;
@@ -110,15 +121,20 @@ export default function FinancialPanelPage() {
       (acc, record) => {
         const monto = typeof record.monto === 'number' ? record.monto : 0;
         if (record.movimiento === 'INGRESOS') acc.ingresos += monto;
-        if (record.movimiento === 'GASTOS') acc.gastos += monto; // Stays negative for balance
-        if (record.movimiento === 'INVERSION') acc.inversion += monto; // Stays negative for balance
+        if (record.movimiento === 'GASTOS') acc.gastos += Math.abs(monto);
+        if (record.movimiento === 'INVERSION') acc.inversion += Math.abs(monto);
         return acc;
       },
-      { ingresos: 0, gastos: 0, inversion: 0 }
+      { ingresos: 0, gastos: 0, inversion: 0, balance: 0 }
     );
   }, [filteredRecords]);
 
-  const balance = summary.ingresos + summary.gastos + summary.inversion;
+  const balance = useMemo(() => {
+      return filteredRecords.reduce((acc, record) => {
+          const monto = typeof record.monto === 'number' ? record.monto : 0;
+          return acc + monto;
+      }, 0);
+  }, [filteredRecords]);
 
   const chartData = useMemo(() => {
     const dataMap = new Map<string, { ingresos: number; gastos: number; inversion: number }>();
@@ -184,8 +200,8 @@ export default function FinancialPanelPage() {
       
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <SummaryCard title="Ingresos del Período" value={formatCurrency(summary.ingresos)} color="text-green-500" />
-        <SummaryCard title="Gastos del Período" value={formatCurrency(Math.abs(summary.gastos))} color="text-red-500" />
-        <SummaryCard title="Inversión del Período" value={formatCurrency(Math.abs(summary.inversion))} color="text-amber-500" />
+        <SummaryCard title="Gastos del Período" value={formatCurrency(summary.gastos)} color="text-red-500" />
+        <SummaryCard title="Inversión del Período" value={formatCurrency(summary.inversion)} color="text-amber-500" />
         <SummaryCard title="Balance del Período" value={formatCurrency(balance)} color={balance >= 0 ? "text-green-500" : "text-red-500"} />
       </div>
 
