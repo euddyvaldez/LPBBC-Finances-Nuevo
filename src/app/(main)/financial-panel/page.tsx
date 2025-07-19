@@ -149,7 +149,24 @@ export default function FinancialPanelPage() {
   const chartData = useMemo(() => {
     const dataMap = new Map<string, { ingresos: number; gastos: number; inversion: number }>();
     
-    const activeViewType = filterMode === 'predefined' ? viewType : customViewType;
+    let activeViewType: ViewType;
+    if (filterMode === 'predefined') {
+        activeViewType = viewType;
+        if(viewType === 'yearly') {
+            const allRecordsYears = new Set(financialRecords.map(r => {
+                const date = r.fecha ? parseDate(r.fecha) : null;
+                return date && isValid(date) ? date.getFullYear() : null;
+            }).filter(Boolean));
+            if (allRecordsYears.size > 1) {
+                // If there is more than one year of data, default to yearly view in the chart
+            } else {
+                 activeViewType = 'monthly';
+            }
+        }
+    } else {
+        activeViewType = customViewType;
+    }
+
 
     filteredRecords.forEach(record => {
       const recordDate = parseDate(record.fecha);
@@ -194,7 +211,7 @@ export default function FinancialPanelPage() {
       }
       return { name: label, ...value };
     });
-  }, [filteredRecords, viewType, filterMode, customViewType]);
+  }, [filteredRecords, viewType, filterMode, customViewType, financialRecords]);
 
 
   const formatCurrency = (amount: number) => {
@@ -308,3 +325,5 @@ const SummaryCard = ({ title, value, color }: { title: string; value: string; co
     </CardContent>
   </Card>
 );
+
+    

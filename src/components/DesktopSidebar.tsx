@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from 'next/link';
@@ -14,7 +15,7 @@ const navItems = [
   { href: '/financial-panel', label: 'Panel Financiero', icon: PieChart },
   { href: '/records', label: 'Gestión de Registros', icon: BookCopy },
   { href: '/members', label: 'Gestión de Integrantes', icon: Users },
-  { href: '/reasons', label: 'Gestión de Razones', icon: HelpCircle },
+  { href: '/reasons', label: 'Razones', icon: HelpCircle },
 ];
 
 type DesktopSidebarProps = {
@@ -81,3 +82,5 @@ export function DesktopSidebar({ isMobile = false }: DesktopSidebarProps) {
     </aside>
   );
 }
+
+    
