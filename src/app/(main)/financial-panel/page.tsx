@@ -40,8 +40,17 @@ export default function FinancialPanelPage() {
     return new Date(Math.min.apply(null, dates.map(d => d.getTime())));
   }, [financialRecords]);
 
+  const newestRecordDate = useMemo(() => {
+    if (financialRecords.length === 0) return new Date();
+    const dates = financialRecords
+      .map(r => r.fecha ? parseDate(r.fecha) : null)
+      .filter(d => d && isValid(d)) as Date[];
+    if (dates.length === 0) return new Date();
+    return new Date(Math.max.apply(null, dates.map(d => d.getTime())));
+  }, [financialRecords]);
+
   const [customStartDate, setCustomStartDate] = useState<Date | undefined>(oldestRecordDate);
-  const [customEndDate, setCustomEndDate] = useState<Date | undefined>(new Date());
+  const [customEndDate, setCustomEndDate] = useState<Date | undefined>(newestRecordDate);
   
   const availableYears = useMemo(() => {
     if (financialRecords.length === 0) return [new Date().getFullYear()];
@@ -62,7 +71,8 @@ export default function FinancialPanelPage() {
 
   useEffect(() => {
     setCustomStartDate(oldestRecordDate);
-  }, [oldestRecordDate]);
+    setCustomEndDate(newestRecordDate);
+  }, [oldestRecordDate, newestRecordDate]);
   
   const filteredRecords = useMemo(() => {
     let recordsToFilter = financialRecords.filter(r => {
