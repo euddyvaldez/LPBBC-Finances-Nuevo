@@ -4,7 +4,7 @@
 import { useAppContext } from '@/contexts/AppProvider';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Eye, EyeOff, Loader2, ArrowRight, Zap, PieChart, Users, BookCopy } from 'lucide-react';
+import { Eye, EyeOff, Loader2, ArrowRight, Zap, PieChart, Users, BookCopy, BarChart3 } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { getCitas } from '@/lib/data';
@@ -50,7 +50,8 @@ export default function DashboardPage() {
     dailyAverageIncome, 
     dailyAverageExpenses,
     uniqueIntegrantesCount,
-    monthlyRecordsCount
+    monthlyRecordsCount,
+    averageDailyMembers
   } = useMemo(() => {
     const validRecords = financialRecords.filter(r => r.fecha && isValid(parseDate(r.fecha)));
 
@@ -79,6 +80,19 @@ export default function DashboardPage() {
     const dailyAverageExpenses = daysInMonth > 0 ? Math.abs(monthlyExpenses) / daysInMonth : 0;
     
     const uniqueIntegrantesInMonth = new Set(monthlyRecords.map(r => r.integranteId));
+    
+    const recordsByDay = monthlyRecords.reduce((acc, record) => {
+      const day = parseDate(record.fecha).getDate();
+      if (!acc[day]) acc[day] = [];
+      acc[day].push(record);
+      return acc;
+    }, {} as Record<number, FinancialRecord[]>);
+
+    const totalDailyUniqueMembers = Object.values(recordsByDay).reduce((sum, dailyRecords) => {
+        return sum + new Set(dailyRecords.map(r => r.integranteId)).size;
+    }, 0);
+    
+    const averageDailyMembers = daysInMonth > 0 ? totalDailyUniqueMembers / daysInMonth : 0;
 
     return { 
         balance, 
@@ -88,7 +102,8 @@ export default function DashboardPage() {
         dailyAverageIncome, 
         dailyAverageExpenses,
         uniqueIntegrantesCount: uniqueIntegrantesInMonth.size,
-        monthlyRecordsCount: monthlyRecords.length
+        monthlyRecordsCount: monthlyRecords.length,
+        averageDailyMembers
     };
   }, [financialRecords]);
 
@@ -183,6 +198,10 @@ export default function DashboardPage() {
                 <div className="flex justify-between items-center text-xs">
                     <span className="flex items-center gap-1 text-muted-foreground"><Users className="h-3 w-3" /> Integrantes Activos</span>
                     <span className="font-medium">{uniqueIntegrantesCount}</span>
+                </div>
+                 <div className="flex justify-between items-center text-xs">
+                    <span className="flex items-center gap-1 text-muted-foreground"><BarChart3 className="h-3 w-3" /> Prom. Integrantes/Día</span>
+                    <span className="font-medium">{averageDailyMembers.toFixed(2)}</span>
                 </div>
             </CardContent>
         </Card>
