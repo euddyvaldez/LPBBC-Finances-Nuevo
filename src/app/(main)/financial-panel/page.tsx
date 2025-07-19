@@ -231,9 +231,9 @@ export default function FinancialPanelPage() {
                 {filterMode === 'predefined' ? (
                 <div className="flex flex-col gap-4">
                     <div className="flex bg-muted p-1 rounded-lg w-full sm:w-[320px]">
-                      <Button variant={viewType === 'yearly' ? 'default' : 'ghost'} onClick={() => setViewType('yearly')} className="flex-1 text-xs sm:text-sm">Anual</Button>
-                      <Button variant={viewType === 'monthly' ? 'default' : 'ghost'} onClick={() => setViewType('monthly')} className="flex-1 text-xs sm:text-sm">Mensual</Button>
                       <Button variant={viewType === 'daily' ? 'default' : 'ghost'} onClick={() => setViewType('daily')} className="flex-1 text-xs sm:text-sm">Diaria</Button>
+                      <Button variant={viewType === 'monthly' ? 'default' : 'ghost'} onClick={() => setViewType('monthly')} className="flex-1 text-xs sm:text-sm">Mensual</Button>
+                      <Button variant={viewType === 'yearly' ? 'default' : 'ghost'} onClick={() => setViewType('yearly')} className="flex-1 text-xs sm:text-sm">Anual</Button>
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-2">
