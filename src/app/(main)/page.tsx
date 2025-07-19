@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { getCitas } from '@/lib/data';
 import type { Cita, FinancialRecord } from '@/types';
 import Link from 'next/link';
-import { format, startOfMonth, endOfMonth, isWithinInterval, parse, isValid, getDaysInMonth } from 'date-fns';
+import { format, startOfMonth, endOfMonth, isWithinInterval, parse, isValid, getDay, getDaysInMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 
 const parseDate = (dateStr: string) => parse(dateStr, 'dd/MM/yyyy', new Date());
@@ -83,7 +83,22 @@ export default function DashboardPage() {
     const dailyAverageIncome = numberOfActiveDays > 0 ? monthlyIncome / numberOfActiveDays : 0;
     const dailyAverageExpenses = numberOfActiveDays > 0 ? Math.abs(monthlyExpenses) / numberOfActiveDays : 0;
     
-    const averageDailyMembers = numberOfActiveDays > 0 ? uniqueIntegrantesInMonth.size / numberOfActiveDays : 0;
+    // --- New logic for averageDailyMembers on Thursdays ---
+    // Note: getDay() returns 0 for Sunday, 1 for Monday, ..., 4 for Thursday
+    const thursdayRecords = monthlyRecords.filter(r => getDay(parseDate(r.fecha)) === 4);
+    
+    let averageDailyMembers = 0;
+    if (thursdayRecords.length > 0) {
+      const uniqueMembersOnThursdays = new Set(thursdayRecords.map(r => r.integranteId));
+      const activeThursdays = new Set(thursdayRecords.map(r => parseDate(r.fecha).getDate()));
+      const numberOfActiveThursdays = activeThursdays.size;
+
+      if (numberOfActiveThursdays > 0) {
+        averageDailyMembers = uniqueMembersOnThursdays.size / numberOfActiveThursdays;
+      }
+    }
+    // --- End of new logic ---
+
 
     return { 
         balance, 
@@ -209,14 +224,15 @@ export default function DashboardPage() {
                         {recentRecords.map((record) => {
                            const recordDate = parseDate(record.fecha);
                            const formattedDate = isValid(recordDate) ? format(recordDate, 'dd MMM yyyy', { locale: es }) : 'Fecha inválida';
+                           const monto = typeof record.monto === 'number' ? record.monto : 0;
                            return (
                            <li key={record.id} className="flex justify-between items-center">
                                <div>
                                    <p className="font-medium text-sm">{record.descripcion}</p>
                                    <p className="text-xs text-muted-foreground">{formattedDate}</p>
                                </div>
-                               <span className={cn('font-mono font-semibold text-sm', record.monto >= 0 ? 'text-green-500' : 'text-red-500')}>
-                                   {formatCurrency(record.monto)}
+                               <span className={cn('font-mono font-semibold text-sm', monto >= 0 ? 'text-green-500' : 'text-red-500')}>
+                                   {formatCurrency(monto)}
                                </span>
                            </li>
                         )})}
