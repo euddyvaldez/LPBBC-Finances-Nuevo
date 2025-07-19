@@ -4,7 +4,7 @@
 import { useAppContext } from '@/contexts/AppProvider';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Eye, EyeOff, Loader2, ArrowRight, Zap, PieChart } from 'lucide-react';
+import { Eye, EyeOff, Loader2, ArrowRight, Zap, PieChart, Users, BookCopy } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { getCitas } from '@/lib/data';
@@ -42,10 +42,19 @@ export default function DashboardPage() {
     return () => clearInterval(timer);
   }, [citas.length]);
 
-  const { balance, monthlyIncome, monthlyExpenses, recentRecords, dailyAverageIncome, dailyAverageExpenses } = useMemo(() => {
+  const { 
+    balance, 
+    monthlyIncome, 
+    monthlyExpenses, 
+    recentRecords, 
+    dailyAverageIncome, 
+    dailyAverageExpenses,
+    uniqueIntegrantesCount,
+    monthlyRecordsCount
+  } = useMemo(() => {
     const validRecords = financialRecords.filter(r => r.fecha && isValid(parseDate(r.fecha)));
 
-    const balance = validRecords.reduce((acc, record) => acc + record.monto, 0);
+    const balance = validRecords.reduce((acc, record) => acc + (record.monto || 0), 0);
     
     const now = new Date();
     const monthStart = startOfMonth(now);
@@ -56,20 +65,31 @@ export default function DashboardPage() {
     
     const monthlyIncome = monthlyRecords
         .filter(r => r.movimiento === 'INGRESOS')
-        .reduce((acc, r) => acc + r.monto, 0);
+        .reduce((acc, r) => acc + (r.monto || 0), 0);
         
     const monthlyExpenses = monthlyRecords
         .filter(r => r.movimiento === 'GASTOS')
-        .reduce((acc, r) => acc + r.monto, 0);
+        .reduce((acc, r) => acc + (r.monto || 0), 0);
 
     const recentRecords = [...validRecords]
       .sort((a, b) => parseDate(b.fecha).getTime() - parseDate(a.fecha).getTime())
       .slice(0, 5);
 
     const dailyAverageIncome = daysInMonth > 0 ? monthlyIncome / daysInMonth : 0;
-    const dailyAverageExpenses = daysInMonth > 0 ? monthlyExpenses / daysInMonth : 0;
+    const dailyAverageExpenses = daysInMonth > 0 ? Math.abs(monthlyExpenses) / daysInMonth : 0;
+    
+    const uniqueIntegrantesInMonth = new Set(monthlyRecords.map(r => r.integranteId));
 
-    return { balance, monthlyIncome, monthlyExpenses, recentRecords, dailyAverageIncome, dailyAverageExpenses };
+    return { 
+        balance, 
+        monthlyIncome, 
+        monthlyExpenses: Math.abs(monthlyExpenses), 
+        recentRecords, 
+        dailyAverageIncome, 
+        dailyAverageExpenses,
+        uniqueIntegrantesCount: uniqueIntegrantesInMonth.size,
+        monthlyRecordsCount: monthlyRecords.length
+    };
   }, [financialRecords]);
 
   const formatCurrency = (amount: number) => {
@@ -155,6 +175,14 @@ export default function DashboardPage() {
                  <div className="flex justify-between items-center text-xs">
                     <span className="text-muted-foreground">Prom. Gasto Diario</span>
                     <span className="font-medium text-red-500/80">{formatCurrency(dailyAverageExpenses)}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs pt-2 border-t mt-2">
+                    <span className="flex items-center gap-1 text-muted-foreground"><BookCopy className="h-3 w-3" /> Cant. de Registros</span>
+                    <span className="font-medium">{monthlyRecordsCount}</span>
+                </div>
+                <div className="flex justify-between items-center text-xs">
+                    <span className="flex items-center gap-1 text-muted-foreground"><Users className="h-3 w-3" /> Integrantes Activos</span>
+                    <span className="font-medium">{uniqueIntegrantesCount}</span>
                 </div>
             </CardContent>
         </Card>
