@@ -4,11 +4,11 @@
 import { useAppContext } from '@/contexts/AppProvider';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Eye, EyeOff, Loader2, ArrowRight, Zap, PieChart, Users, BookCopy, BarChart3, Repeat } from 'lucide-react';
+import { Eye, EyeOff, Loader2, ArrowRight, Zap, PieChart, Users, BookCopy, BarChart3, Repeat, TrendingUp } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { getCitas } from '@/lib/data';
-import type { Cita, FinancialRecord } from '@/types';
+import type { Cita, FinancialRecord, Razon } from '@/types';
 import Link from 'next/link';
 import { format, startOfMonth, endOfMonth, isWithinInterval, parse, isValid, getDay, getDaysInMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -16,7 +16,7 @@ import { es } from 'date-fns/locale';
 const parseDate = (dateStr: string) => parse(dateStr, 'dd/MM/yyyy', new Date());
 
 export default function DashboardPage() {
-  const { financialRecords, loading } = useAppContext();
+  const { financialRecords, loading, razones } = useAppContext();
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [citas, setCitas] = useState<Cita[]>([]);
   const [currentCitaIndex, setCurrentCitaIndex] = useState(0);
@@ -52,7 +52,8 @@ export default function DashboardPage() {
     uniqueIntegrantesCount,
     monthlyRecordsCount,
     averageDailyMembers,
-    averageDailyRecords
+    averageDailyRecords,
+    top5Reasons,
   } = useMemo(() => {
     const validRecords = financialRecords.filter(r => r.fecha && isValid(parseDate(r.fecha)));
 
@@ -88,7 +89,6 @@ export default function DashboardPage() {
     const averageDailyRecords = numberOfActiveDays > 0 ? monthlyRecordsCount / numberOfActiveDays : 0;
     
     // --- Logic for averageDailyMembers on Thursdays ---
-    // Note: getDay() returns 0 for Sunday, 1 for Monday, ..., 4 for Thursday
     const thursdayRecords = monthlyRecords.filter(r => getDay(parseDate(r.fecha)) === 4);
     
     let averageDailyMembers = 0;
@@ -103,6 +103,34 @@ export default function DashboardPage() {
     }
     // --- End of new logic ---
 
+    // --- Top 5 Reasons Logic ---
+    const reasonCounts = monthlyRecords.reduce((acc, record) => {
+        acc[record.razonId] = (acc[record.razonId] || 0) + 1;
+        return acc;
+    }, {} as Record<string, number>);
+
+    const sortedReasons = Object.keys(reasonCounts).sort((a, b) => reasonCounts[b] - reasonCounts[a]).slice(0, 5);
+
+    const top5Reasons = sortedReasons.map(razonId => {
+        const razonInfo = razones.find(r => r.id === razonId);
+        const recordsForReason = monthlyRecords.filter(r => r.razonId === razonId);
+        
+        const totals = recordsForReason.reduce((acc, record) => {
+            const monto = record.monto || 0;
+            if (record.movimiento === 'INGRESOS') acc.ingresos += monto;
+            if (record.movimiento === 'GASTOS') acc.gastos += Math.abs(monto);
+            if (record.movimiento === 'INVERSION') acc.inversion += Math.abs(monto);
+            return acc;
+        }, { ingresos: 0, gastos: 0, inversion: 0 });
+
+        return {
+            id: razonId,
+            descripcion: razonInfo?.descripcion || 'Razón Desconocida',
+            count: reasonCounts[razonId],
+            ...totals
+        };
+    });
+    // --- End of Top 5 Reasons ---
 
     return { 
         balance, 
@@ -114,9 +142,10 @@ export default function DashboardPage() {
         uniqueIntegrantesCount: uniqueIntegrantesInMonth.size,
         monthlyRecordsCount: monthlyRecords.length,
         averageDailyMembers,
-        averageDailyRecords
+        averageDailyRecords,
+        top5Reasons
     };
-  }, [financialRecords]);
+  }, [financialRecords, razones]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('es-MX', {
@@ -222,10 +251,10 @@ export default function DashboardPage() {
         </Card>
 
         {/* Recent Records */}
-        <Card className="lg:col-span-2">
+        <Card>
             <CardHeader>
                 <CardTitle>Registros Recientes</CardTitle>
-                <CardDescription>Las últimas 5 transacciones registradas.</CardDescription>
+                <CardDescription>Las últimas 5 transacciones.</CardDescription>
             </CardHeader>
             <CardContent>
                 {recentRecords.length > 0 ? (
@@ -254,6 +283,39 @@ export default function DashboardPage() {
                 </Button>
             </CardContent>
         </Card>
+
+        {/* Top 5 Reasons */}
+        <Card>
+            <CardHeader>
+                <CardTitle>Top 5 Razones del Mes</CardTitle>
+                <CardDescription>Las razones más frecuentes.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {top5Reasons.length > 0 ? (
+                    <ul className="space-y-4">
+                       {top5Reasons.map((reason) => (
+                           <li key={reason.id}>
+                               <div className="flex justify-between items-start">
+                                   <p className="font-medium text-sm flex-1 pr-2">{reason.descripcion}</p>
+                                   <span className="text-xs bg-primary/10 text-primary font-semibold px-2 py-0.5 rounded-full">{reason.count} {reason.count === 1 ? 'vez' : 'veces'}</span>
+                               </div>
+                               <div className="text-xs text-muted-foreground mt-1 space-x-2">
+                                   {reason.ingresos > 0 && <span className="text-green-500">I: {formatCurrency(reason.ingresos)}</span>}
+                                   {reason.gastos > 0 && <span className="text-red-500">G: {formatCurrency(reason.gastos)}</span>}
+                                   {reason.inversion > 0 && <span className="text-amber-500">N: {formatCurrency(reason.inversion)}</span>}
+                               </div>
+                           </li>
+                       ))}
+                    </ul>
+                ) : (
+                    <p className="text-center text-muted-foreground py-4">No hay datos de razones para este mes.</p>
+                )}
+                 <Button variant="link" asChild className="p-0 h-auto mt-4">
+                    <Link href="/reasons">Ver todas las razones <ArrowRight className="ml-1 h-4 w-4"/></Link>
+                </Button>
+            </CardContent>
+        </Card>
+
       </div>
 
       <Card className="w-full shadow-md">
@@ -270,4 +332,5 @@ export default function DashboardPage() {
       </Card>
     </div>
   );
-}
+
+    
