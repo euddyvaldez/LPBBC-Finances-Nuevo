@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/select';
 import { DatePicker } from '@/components/DatePicker';
 import { useAppContext } from '@/contexts/AppProvider';
-import { subMonths, format, parse, isValid, differenceInMonths } from 'date-fns';
+import { subMonths, format, parse, isValid } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { FinancialChart } from '@/components/FinancialChart';
 import type { FinancialRecord } from '@/types';
@@ -28,6 +28,7 @@ export default function FinancialPanelPage() {
   const { financialRecords, loading } = useAppContext();
   const [filterMode, setFilterMode] = useState<FilterMode>('predefined');
   const [viewType, setViewType] = useState<ViewType>('monthly');
+  const [customViewType, setCustomViewType] = useState<ViewType>('daily');
   const [chartType, setChartType] = useState<ChartType>('bar');
   const [customStartDate, setCustomStartDate] = useState<Date | undefined>(subMonths(new Date(), 1));
   const [customEndDate, setCustomEndDate] = useState<Date | undefined>(new Date());
@@ -50,7 +51,11 @@ export default function FinancialPanelPage() {
   }, [availableYears]);
   
   const filteredRecords = useMemo(() => {
-    let recordsToFilter = financialRecords.filter(r => r.fecha && isValid(parseDate(r.fecha)));
+    let recordsToFilter = financialRecords.filter(r => {
+        if (!r.fecha) return false;
+        const date = parseDate(r.fecha);
+        return isValid(date);
+    });
 
     if (filterMode === 'predefined') {
       const year = parseInt(selectedYear, 10);
@@ -70,8 +75,7 @@ export default function FinancialPanelPage() {
             
         case 'daily':
             startDate = new Date(year, month, 1);
-            const nextMonth = new Date(year, month + 1, 1);
-            endDate = new Date(nextMonth.getTime() - 1);
+            endDate = new Date(year, month + 1, 0, 23, 59, 59);
             break;
 
         default:
@@ -87,9 +91,16 @@ export default function FinancialPanelPage() {
       if (!customStartDate || !customEndDate) return [];
       const startDate = customStartDate;
       const endDate = customEndDate;
+      // Ensure start date is before end date
+      const rangeStart = startDate < endDate ? startDate : endDate;
+      const rangeEnd = startDate > endDate ? startDate : endDate;
+      
+      rangeStart.setHours(0, 0, 0, 0);
+      rangeEnd.setHours(23, 59, 59, 999);
+
       return recordsToFilter.filter(r => {
         const recordDate = parseDate(r.fecha);
-        return recordDate >= startDate && recordDate <= endDate;
+        return recordDate >= rangeStart && recordDate <= rangeEnd;
       });
     }
   }, [financialRecords, filterMode, viewType, selectedYear, selectedMonth, customStartDate, customEndDate]);
@@ -112,25 +123,17 @@ export default function FinancialPanelPage() {
   const chartData = useMemo(() => {
     const dataMap = new Map<string, { ingresos: number; gastos: number; inversion: number }>();
     
-    let isCustomRangeLong = false;
-    if(filterMode === 'custom' && customStartDate && customEndDate){
-      const diff = differenceInMonths(customEndDate, customStartDate);
-      isCustomRangeLong = diff >= 2;
-    }
+    const activeViewType = filterMode === 'predefined' ? viewType : customViewType;
 
     filteredRecords.forEach(record => {
       const recordDate = parseDate(record.fecha);
       if(!isValid(recordDate) || typeof record.monto !== 'number') return;
 
       let key = '';
-      if (viewType === 'yearly' && filterMode === 'predefined') {
-          key = format(recordDate, 'yyyy');
-      } else if (viewType === 'monthly' && filterMode === 'predefined') {
-          key = format(recordDate, 'yyyy-MM');
-      } else if (viewType === 'daily' && filterMode === 'predefined') {
-          key = format(recordDate, 'yyyy-MM-dd');
-      } else { // custom range
-          key = isCustomRangeLong ? format(recordDate, 'yyyy-MM') : format(recordDate, 'yyyy-MM-dd');
+      switch(activeViewType) {
+        case 'yearly': key = format(recordDate, 'yyyy'); break;
+        case 'monthly': key = format(recordDate, 'yyyy-MM'); break;
+        case 'daily': key = format(recordDate, 'yyyy-MM-dd'); break;
       }
       
       if (!dataMap.has(key)) {
@@ -149,31 +152,23 @@ export default function FinancialPanelPage() {
     return sortedEntries.map(([key, value]) => {
       let label = key;
       let keyFormat: string;
-      if (viewType === 'yearly' && filterMode === 'predefined') {
-          keyFormat = 'yyyy';
-      } else if (viewType === 'monthly' && filterMode === 'predefined') {
-          keyFormat = 'yyyy-MM';
-      } else if (viewType === 'daily' && filterMode === 'predefined') {
-          keyFormat = 'yyyy-MM-dd';
-      } else {
-          keyFormat = isCustomRangeLong ? 'yyyy-MM' : 'yyyy-MM-dd';
+      switch(activeViewType) {
+        case 'yearly': keyFormat = 'yyyy'; break;
+        case 'monthly': keyFormat = 'yyyy-MM'; break;
+        default: keyFormat = 'yyyy-MM-dd'; break;
       }
 
       const keyDate = parse(key, keyFormat, new Date());
       if(isValid(keyDate)) {
-         if (viewType === 'yearly' && filterMode === 'predefined') {
-            label = format(keyDate, 'yyyy');
-         } else if (viewType === 'monthly' && filterMode === 'predefined') {
-            label = format(keyDate, 'MMM', { locale: es });
-         } else if (viewType === 'daily' && filterMode === 'predefined') {
-            label = format(keyDate, 'd MMM', { locale: es });
-         } else { // custom range
-            label = isCustomRangeLong ? format(keyDate, 'MMM yyyy', { locale: es }) : format(keyDate, 'd MMM', { locale: es });
+         switch(activeViewType) {
+            case 'yearly': label = format(keyDate, 'yyyy'); break;
+            case 'monthly': label = format(keyDate, 'MMM yyyy', { locale: es }); break;
+            case 'daily': label = format(keyDate, 'd MMM yyyy', { locale: es }); break;
          }
       }
       return { name: label, ...value };
     });
-  }, [filteredRecords, viewType, filterMode, customStartDate, customEndDate]);
+  }, [filteredRecords, viewType, filterMode, customViewType]);
 
 
   const formatCurrency = (amount: number) => new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(amount);
@@ -234,9 +229,16 @@ export default function FinancialPanelPage() {
                     )}
                 </div>
                 ) : (
-                <div className="flex flex-col sm:flex-row gap-2">
-                    <DatePicker date={customStartDate} setDate={setCustomStartDate} />
-                    <DatePicker date={customEndDate} setDate={setCustomEndDate} />
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col sm:flex-row gap-2">
+                      <DatePicker date={customStartDate} setDate={setCustomStartDate} />
+                      <DatePicker date={customEndDate} setDate={setCustomEndDate} />
+                  </div>
+                  <div className="flex bg-muted p-1 rounded-lg w-full sm:w-[320px]">
+                      <Button variant={customViewType === 'daily' ? 'default' : 'ghost'} onClick={() => setCustomViewType('daily')} className="flex-1 text-xs sm:text-sm">Diaria</Button>
+                      <Button variant={customViewType === 'monthly' ? 'default' : 'ghost'} onClick={() => setCustomViewType('monthly')} className="flex-1 text-xs sm:text-sm">Mensual</Button>
+                      <Button variant={customViewType === 'yearly' ? 'default' : 'ghost'} onClick={() => setCustomViewType('yearly')} className="flex-1 text-xs sm:text-sm">Anual</Button>
+                  </div>
                 </div>
                 )}
             </div>
@@ -275,7 +277,5 @@ const SummaryCard = ({ title, value, color }: { title: string; value: string; co
     </CardContent>
   </Card>
 );
-
-    
 
     
