@@ -428,6 +428,27 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
     };
     reader.readAsText(file);
   };
+  
+  const PaginationControls = () => (
+    <div className="flex items-center justify-between mt-4">
+        <div className='flex items-center gap-2'>
+            <span className="text-sm text-muted-foreground">Filas por página</span>
+            <Select value={String(recordsPerPage)} onValueChange={(v) => setRecordsPerPage(Number(v))}>
+                <SelectTrigger className="w-[70px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                    {[10, 20, 50, 100].map(v => <SelectItem key={v} value={String(v)}>{v}</SelectItem>)}
+                </SelectContent>
+            </Select>
+        </div>
+        <div className="flex items-center gap-4">
+            <span className="text-sm text-muted-foreground">Página {currentPage} de {totalPages}</span>
+            <div className='flex items-center gap-2'>
+                <Button variant="outline" size="icon" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}><ChevronLeft /></Button>
+                <Button variant="outline" size="icon" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}><ChevronRight /></Button>
+            </div>
+        </div>
+    </div>
+  );
 
 
   return (
@@ -455,8 +476,9 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
           </div>
         </CardHeader>
         <CardContent>
+            <PaginationControls />
             {/* Mobile View: Cards */}
-            <div className="md:hidden">
+            <div className="md:hidden mt-4">
               {paginatedRecords.length > 0 ? (
                   paginatedRecords.map((record) => (
                       <RecordCard key={record.id} record={record} getIntegranteName={getIntegranteName} getRazonDesc={getRazonDesc} />
@@ -467,7 +489,7 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
             </div>
 
             {/* Desktop View: Table */}
-            <div className="hidden md:block">
+            <div className="hidden md:block mt-4">
                 <div className="overflow-x-auto">
                     <Table>
                         <TableHeader>
@@ -512,24 +534,7 @@ const RecordsTable = ({ records }: { records: FinancialRecord[] }) => {
                     </Table>
                 </div>
             </div>
-             <div className="flex items-center justify-between mt-4">
-                <div className='flex items-center gap-2'>
-                    <span className="text-sm text-muted-foreground">Filas por página</span>
-                    <Select value={String(recordsPerPage)} onValueChange={(v) => setRecordsPerPage(Number(v))}>
-                        <SelectTrigger className="w-[70px]"><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                            {[10, 20, 50, 100].map(v => <SelectItem key={v} value={String(v)}>{v}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                </div>
-                <div className="flex items-center gap-4">
-                    <span className="text-sm text-muted-foreground">Página {currentPage} de {totalPages}</span>
-                    <div className='flex items-center gap-2'>
-                        <Button variant="outline" size="icon" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}><ChevronLeft /></Button>
-                        <Button variant="outline" size="icon" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}><ChevronRight /></Button>
-                    </div>
-                </div>
-            </div>
+             <PaginationControls />
         </CardContent>
       </Card>
       <AlertDialog open={importDialog.isOpen} onOpenChange={(isOpen) => setImportDialog({isOpen, file: isOpen ? importDialog.file : null})}>
@@ -570,4 +575,3 @@ export default function RecordsPage() {
         </div>
     );
 }
-
