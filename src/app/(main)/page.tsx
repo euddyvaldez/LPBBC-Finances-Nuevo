@@ -60,7 +60,6 @@ export default function DashboardPage() {
     const now = new Date();
     const monthStart = startOfMonth(now);
     const monthEnd = endOfMonth(now);
-    const daysInMonth = getDaysInMonth(now);
 
     const monthlyRecords = validRecords.filter(r => isWithinInterval(parseDate(r.fecha), { start: monthStart, end: monthEnd }));
     
@@ -76,23 +75,15 @@ export default function DashboardPage() {
       .sort((a, b) => parseDate(b.fecha).getTime() - parseDate(a.fecha).getTime())
       .slice(0, 5);
 
-    const dailyAverageIncome = daysInMonth > 0 ? monthlyIncome / daysInMonth : 0;
-    const dailyAverageExpenses = daysInMonth > 0 ? Math.abs(monthlyExpenses) / daysInMonth : 0;
-    
     const uniqueIntegrantesInMonth = new Set(monthlyRecords.map(r => r.integranteId));
     
-    const recordsByDay = monthlyRecords.reduce((acc, record) => {
-      const day = parseDate(record.fecha).getDate();
-      if (!acc[day]) acc[day] = [];
-      acc[day].push(record);
-      return acc;
-    }, {} as Record<number, FinancialRecord[]>);
+    const activeDaysInMonth = new Set(monthlyRecords.map(r => parseDate(r.fecha).getDate()));
+    const numberOfActiveDays = activeDaysInMonth.size;
 
-    const totalDailyUniqueMembers = Object.values(recordsByDay).reduce((sum, dailyRecords) => {
-        return sum + new Set(dailyRecords.map(r => r.integranteId)).size;
-    }, 0);
+    const dailyAverageIncome = numberOfActiveDays > 0 ? monthlyIncome / numberOfActiveDays : 0;
+    const dailyAverageExpenses = numberOfActiveDays > 0 ? Math.abs(monthlyExpenses) / numberOfActiveDays : 0;
     
-    const averageDailyMembers = daysInMonth > 0 ? totalDailyUniqueMembers / daysInMonth : 0;
+    const averageDailyMembers = numberOfActiveDays > 0 ? uniqueIntegrantesInMonth.size / numberOfActiveDays : 0;
 
     return { 
         balance, 
