@@ -31,6 +31,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!isFirebaseConfigured) {
       setError('Error de configuración: La clave de API de Firebase no es válida. Revisa tu archivo de configuración en src/lib/firebase.ts.');
       setLoading(false);
+      if (!publicRoutes.includes(pathname)) {
+        router.push('/login');
+      }
       return;
     }
 
@@ -106,19 +109,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setError('Error de configuración: La clave de API de Firebase no es válida. Revisa tu archivo de configuración en src/lib/firebase.ts.');
         break;
       case 'auth/user-not-found':
-        setError('No se encontró un usuario con ese email.');
-        break;
       case 'auth/wrong-password':
-        setError('Contraseña incorrecta.');
+        setError('Email o contraseña incorrectos.');
         break;
       case 'auth/email-already-in-use':
-        setError('Este email ya está en uso.');
+        setError('Este email ya está en uso por otra cuenta.');
         break;
       case 'auth/invalid-email':
-         setError('El email no es válido.');
+         setError('El formato del email no es válido.');
+         break;
+      case 'auth/weak-password':
+         setError('La contraseña es demasiado débil. Debe tener al menos 6 caracteres.');
          break;
       default:
-        setError('Ocurrió un error. Por favor, inténtalo de nuevo.');
+        setError('Ocurrió un error inesperado. Por favor, inténtalo de nuevo.');
         console.error('Firebase Auth Error:', e);
     }
   };
